@@ -8,6 +8,7 @@ frozenlist==1.3.0
 idna==3.3
 interactions-get==1.1.1
 multidict==6.0.2
+pkg_resources==0.0.0
 pycodestyle==2.8.0
 toml==0.10.2
 yarl==1.7.2
