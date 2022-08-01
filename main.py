@@ -43,8 +43,9 @@ if not "votings" in data:
     data["votings"] = {}
 json_dump(data)
 
-async def automatic_delete() -> None:
-    bot._loop.call_later(86400, run_delete)
+async def automatic_delete(oneshot : bool = False) -> None:
+    if not oneshot:
+        bot._loop.call_later(86400, run_delete)
     offer_channel = await get(bot, dc.Channel, channel_id=988492568344014908)
     voting_channel = await get(bot, dc.Channel, channel_id=977550305157865472)
     current_time = time()
@@ -81,8 +82,8 @@ async def automatic_delete() -> None:
         del data["votings"][id]
     json_dump(data)
 
-def run_delete():
-    bot._loop.create_task(automatic_delete())
+def run_delete(oneshot : bool = False):
+    bot._loop.create_task(automatic_delete(oneshot=oneshot))
 
 @bot.event()
 async def on_ready():
@@ -414,6 +415,9 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     if int(count) > 10:
         await ctx.send("Entschuldige, mehr als 10 Möglichkeiten sind aktuell nicht verfügbar.", ephemeral=True),
         return
+    deadline.replace(",", ".")
+    if float(deadline) < 0.045:
+        deadline = 0.045
     identifier = randint(1000, 9999)
     while identifier in data["votings"]:
         identifier = randint(1000, 9999)
@@ -424,8 +428,14 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     count = 2 if int(count) < 2 else count
     end_time = time() + int(deadline) * 86400
     data["votings"][str(identifier)]["deadline"] = end_time
-    end_time = strftime("%d.%m.") + "- " + \
-        strftime("%d.%m.", localtime(end_time))
+    time_till_midnight = mktime(strptime(strftime("%d.%m.%Y") + " 23:59", "%d.%m.%Y %H:%M"))
+    if end_time < time_till_midnight:
+        end_time = strftime("%H:%M", localtime(end_time))
+        wait_time = end_time - time()
+        bot._loop.call_later(wait_time, run_delete, True)
+    else:
+        end_time = strftime("%d.%m.") + "- " + \
+            strftime("%d.%m.", localtime(end_time))
     
     server : dc.Guild = await ctx.get_guild()
     minecrafter_role : dc.Role = await server.get_role(918574604858048532)
