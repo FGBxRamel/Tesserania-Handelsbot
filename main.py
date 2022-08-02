@@ -438,7 +438,7 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
             strftime("%d.%m.", localtime(end_time))
     
     server : dc.Guild = await ctx.get_guild()
-    minecrafter_role : dc.Role = await server.get_role(918574604858048532)
+    minecrafter_role : dc.Role = await server.get_role(995073183445168179) # 918574604858048532
     voting_embed = dc.Embed(
         title= "Liebe Mitbürger",
         description=f"\n{text}",
