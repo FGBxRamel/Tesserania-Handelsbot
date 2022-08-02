@@ -414,7 +414,7 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     if int(count) > 10:
         await ctx.send("Entschuldige, mehr als 10 Möglichkeiten sind aktuell nicht verfügbar.", ephemeral=True),
         return
-    deadline.replace(",", ".")
+    deadline = deadline.replace(",", ".")
     if float(deadline) < 0.045:
         deadline = 0.045
     identifier = randint(1000, 9999)
@@ -425,19 +425,19 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     data["votings"][str(identifier)]["user_id"] = str(ctx.author.id)
 
     count = 2 if int(count) < 2 else count
-    end_time = time() + int(deadline) * 86400
+    end_time = time() + float(deadline) * 86400
     data["votings"][str(identifier)]["deadline"] = end_time
     time_till_midnight = mktime(strptime(strftime("%d.%m.%Y") + " 23:59", "%d.%m.%Y %H:%M"))
     if end_time < time_till_midnight:
-        end_time = strftime("%H:%M", localtime(end_time))
-        wait_time = end_time - time()
+        wait_time = int(end_time) - time()
         bot._loop.call_later(wait_time, run_delete, True)
+        end_time = strftime("%H:%M", localtime(int(end_time)))
     else:
         end_time = strftime("%d.%m.") + "- " + \
-            strftime("%d.%m.", localtime(end_time))
+            strftime("%d.%m.", localtime(int(end_time)))
     
     server : dc.Guild = await ctx.get_guild()
-    minecrafter_role : dc.Role = await server.get_role(995073183445168179) # 918574604858048532
+    minecrafter_role : dc.Role = await server.get_role(918574604858048532)
     voting_embed = dc.Embed(
         title= "Liebe Mitbürger",
         description=f"\n{text}",
@@ -512,7 +512,7 @@ async def edit_voting_response(ctx : dc.CommandContext, id : str, text : str):
     text = text + "\n*bearbeitet*"
     message_embed.description = text
     server : dc.Guild = await ctx.get_guild()
-    minecrafter_role : dc.Role = await server.get_role(995073183445168179)
+    minecrafter_role : dc.Role = await server.get_role(918574604858048532)
     await voting_message.edit(content = minecrafter_role.mention, embeds=message_embed)
     await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
