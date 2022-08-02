@@ -365,8 +365,7 @@ async def votings(ctx : dc.CommandContext, aktion : str):
                     style=dc.TextStyleType.SHORT,
                     label="Wie lange läuft die Abstimmung?",
                     custom_id="create_voting_deadline",
-                    required=True,
-                    max_length=2
+                    required=True
                 )
             ]
         )
