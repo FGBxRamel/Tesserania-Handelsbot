@@ -365,7 +365,8 @@ async def votings(ctx : dc.CommandContext, aktion : str):
                     style=dc.TextStyleType.SHORT,
                     label="Wie lange läuft die Abstimmung?",
                     custom_id="create_voting_deadline",
-                    required=True
+                    required=True,
+                    max_length=3
                 )
             ]
         )
@@ -414,9 +415,21 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     if int(count) > 10:
         await ctx.send("Entschuldige, mehr als 10 Möglichkeiten sind aktuell nicht verfügbar.", ephemeral=True),
         return
+    time_type = "Tag(e)"
+    if "h" in deadline:
+        time_in_seconds = 3600
+        deadline = deadline.replace("h", "")
+        time_type = "Stunde(n)"
+    else:
+        time_in_seconds = 86400
+        deadline = deadline.replace("d", "")
     deadline = deadline.replace(",", ".")
-    if float(deadline) < 0.045:
-        deadline = 0.045
+    try:
+        if float(deadline) < 1:
+            deadline = 1
+    except ValueError:
+        await ctx.send("Die Uhrzeit hat ein falsches Format.", ephemeral=True)
+        return
     identifier = randint(1000, 9999)
     while identifier in data["votings"]:
         identifier = randint(1000, 9999)
@@ -425,11 +438,11 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     data["votings"][str(identifier)]["user_id"] = str(ctx.author.id)
 
     count = 2 if int(count) < 2 else count
-    end_time = time() + float(deadline) * 86400
+    end_time = time() + float(deadline) * time_in_seconds
     data["votings"][str(identifier)]["deadline"] = end_time
     time_till_midnight = mktime(strptime(strftime("%d.%m.%Y") + " 23:59", "%d.%m.%Y %H:%M"))
     if end_time < time_till_midnight:
-        wait_time = int(end_time) - time()
+        wait_time = end_time - time()
         bot._loop.call_later(wait_time, run_delete, True)
         end_time = strftime("%H:%M", localtime(int(end_time)))
     else:
@@ -443,7 +456,7 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
         description=f"\n{text}",
         color=0xdaa520,
         author=dc.EmbedAuthor(
-        name=f"{ctx.author.user.username}, {end_time} ({deadline} Tage)"),
+        name=f"{ctx.author.user.username}, {end_time} ({deadline} {time_type})"),
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
