@@ -440,14 +440,10 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     count = 2 if int(count) < 2 else count
     end_time = time() + float(deadline) * time_in_seconds
     data["votings"][str(identifier)]["deadline"] = end_time
-    time_till_midnight = mktime(strptime(strftime("%d.%m.%Y") + " 23:59", "%d.%m.%Y %H:%M"))
-    if end_time < time_till_midnight:
-        wait_time = end_time - time()
-        bot._loop.call_later(wait_time, run_delete, True)
-        end_time = strftime("%H:%M", localtime(int(end_time)))
-    else:
-        end_time = strftime("%d.%m.") + "- " + \
-            strftime("%d.%m.", localtime(int(end_time)))
+    wait_time = end_time - time()
+    bot._loop.call_later(wait_time, run_delete, True)
+    end_time = strftime("%d.%m.") + "- " + \
+        strftime("%d.%m. %H:%M", localtime(int(end_time)))
     
     server : dc.Guild = await ctx.get_guild()
     minecrafter_role : dc.Role = await server.get_role(918574604858048532)
