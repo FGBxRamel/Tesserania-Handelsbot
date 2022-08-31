@@ -28,9 +28,6 @@ def implement(json: str):
 def json_dump(data_dict: dict):
     with open("data.json", "w+") as dump_file:
         json.dump(data_dict, dump_file, indent=4)
-
-
-global data
 try:
     data = implement(json.loads(open("data.json", "r+").read()))
 except json.JSONDecodeError:
