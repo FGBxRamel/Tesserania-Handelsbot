@@ -16,11 +16,11 @@ emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1
 open("data.json", "a").close()
 
 
-def implement(json: str):
+def implement(json):
     data = {}
     for key, value in json.items():
         if type(value) is dict and key in data:
-            data[key] = implement(value, data[key])
+            data[key] = implement(value)
         else:
             data[key] = value
     return data
@@ -36,11 +36,11 @@ try:
     data = implement(json.loads(open("data.json", "r+").read()))
 except json.JSONDecodeError:
     data = {}
-if not "offers" in data:
+if "offers" not in data:
     data["offers"] = {}
-if not "count" in data:
+if "count" not in data:
     data["count"] = {}
-if not "votings" in data:
+if "votings" not in data:
     data["votings"] = {}
 json_dump(data)
 
@@ -242,7 +242,7 @@ async def create_offer_respone(ctx: dc.CommandContext, title: str, price: str, o
         strftime("%d.%m.", localtime(end_time))
     app_embed = dc.Embed(
         title=title,
-        description=f"\n**Angebot:** {offer}\n\n**Preis:** {price}",
+        description=f"\n{offer}\n\n**Preis:** {price}",
         color=0xdaa520,
         author=dc.EmbedAuthor(
             name=f"{ctx.author.user.username}, {end_time} ({deadline} Tage)"),
@@ -267,7 +267,7 @@ async def delete_offer_response(ctx: dc.CommandContext, id: str):
         await ctx.send(
             f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
         return
-    if not id in data["offers"]:
+    if id not in data["offers"]:
         await ctx.send("Diese ID existiert nicht!", ephemeral=True)
         return
     user_privilege = False
@@ -423,7 +423,8 @@ async def votings(ctx: dc.CommandContext, aktion: str):
 @bot.modal("mod_create_voting")
 async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, deadline: str):
     if int(count) > 10:
-        await ctx.send("Entschuldige, mehr als 10 Möglichkeiten sind aktuell nicht verfügbar.", ephemeral=True),
+        await ctx.send("""Entschuldige, mehr als 10 Möglichkeiten
+            sind aktuell nicht verfügbar.""", ephemeral=True)
         return
     time_type = "Tag(e)"
     if "h" in deadline:
@@ -488,7 +489,7 @@ async def delete_voting_response(ctx: dc.CommandContext, id: str):
         await ctx.send(
             f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
         return
-    if not id in data["votings"]:
+    if id not in data["votings"]:
         await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
         return
     user_privilege = False
@@ -519,7 +520,7 @@ async def edit_voting_response(ctx: dc.CommandContext, id: str, text: str):
         await ctx.send(
             f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
         return
-    if not id in data["votings"]:
+    if id not in data["votings"]:
         await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
         return
     if not data["votings"][id]["user_id"] == str(ctx.author.id):
