@@ -93,6 +93,7 @@ def run_delete(oneshot: bool = False):
 
 @bot.event()
 async def on_ready():
+    global run
     if not run:
         wait_time = mktime(strptime(strftime("%d.%m.%Y") +
                            " 23:59", "%d.%m.%Y %H:%M")) - time()
