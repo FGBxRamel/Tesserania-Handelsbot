@@ -19,7 +19,7 @@ open("data.json", "a").close()
 def implement(json):
     data = {}
     for key, value in json.items():
-        if type(value) == dict and key in data:
+        if type(value) is dict and key in data:
             data[key] = implement(value)
         else:
             data[key] = value
