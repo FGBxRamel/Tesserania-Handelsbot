@@ -10,7 +10,8 @@ bot = dc.Client(
 scope_ids = [993913459169300540, 918559612813324340]
 privileged_roles = ["918561303184965702", "918560437958742106"]
 run = False
-emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA", "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
+emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA",
+               "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
 
 open("data.json", "a").close()
 
@@ -43,7 +44,8 @@ if not "votings" in data:
     data["votings"] = {}
 json_dump(data)
 
-async def automatic_delete(oneshot : bool = False) -> None:
+
+async def automatic_delete(oneshot: bool = False) -> None:
     if not oneshot:
         bot._loop.call_later(86400, run_delete)
     offer_channel = await get(bot, dc.Channel, channel_id=988492568344014908)
@@ -59,18 +61,21 @@ async def automatic_delete(oneshot : bool = False) -> None:
             except TypeError:
                 continue
             delete_offer_ids.append(id)
-            data["count"][values["user_id"]] = data["count"][values["user_id"]] - 1
+            data["count"][values["user_id"]
+                          ] = data["count"][values["user_id"]] - 1
 
     for id, values in data["votings"].items():
         if values["deadline"] <= current_time:
-            message : dc.Message = await voting_channel.get_message(int(values["message_id"]))
+            message: dc.Message = await voting_channel.get_message(int(values["message_id"]))
             try:
                 winner, winner_count = "", 0
                 for reaction in message.reactions:
                     if int(reaction["count"]) > winner_count:
-                        winner, winner_count = reaction["emoji"]["name"], int(reaction["count"])
+                        winner, winner_count = reaction["emoji"]["name"], int(
+                            reaction["count"])
                 message_embed: dc.Embed = message.embeds[0]
-                message_embed.description = message_embed.description + f"\n\n**Ergebnis:** {winner}"
+                message_embed.description = message_embed.description + \
+                    f"\n\n**Ergebnis:** {winner}"
                 await message.edit(embeds=message_embed)
             except TypeError:
                 continue
@@ -82,8 +87,10 @@ async def automatic_delete(oneshot : bool = False) -> None:
         del data["votings"][id]
     json_dump(data)
 
-def run_delete(oneshot : bool = False):
+
+def run_delete(oneshot: bool = False):
     bot._loop.create_task(automatic_delete(oneshot=oneshot))
+
 
 @bot.event()
 async def on_ready():
@@ -94,6 +101,7 @@ async def on_ready():
         bot._loop.call_later(wait_time, run_delete)
         run = True
 
+
 @bot.command(
     name="test",
     description="A test command to test stuff.",
@@ -102,7 +110,8 @@ async def on_ready():
 async def test(ctx: dc.CommandContext):
     await ctx.send("Test worked!")
 
-#---Offer---
+# ---Offer---
+
 
 @bot.command(
     name="angebot",
@@ -312,7 +321,7 @@ async def edit_offer_id(ctx: dc.CommandContext, id: str, title: str, text: str):
     await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
 
-#---Abstimmungen---
+# ---Abstimmungen---
 
 @bot.command(
     name="abstimmung",
@@ -341,25 +350,25 @@ async def edit_offer_id(ctx: dc.CommandContext, id: str, title: str, text: str):
         )
     ]
 )
-async def votings(ctx : dc.CommandContext, aktion : str):
+async def votings(ctx: dc.CommandContext, aktion: str):
     if aktion == "create":
         create_voting_modal = dc.Modal(
             title="Abstimmung erstellen",
-            custom_id = "mod_create_voting",
-            components= [
+            custom_id="mod_create_voting",
+            components=[
                 dc.TextInput(
-                    style = dc.TextStyleType.PARAGRAPH,
-                    label = "Welch Volksentscheid wollt ihr verkünden?",
-                    custom_id = "create_voting_text",
-                    required = True,
+                    style=dc.TextStyleType.PARAGRAPH,
+                    label="Welch Volksentscheid wollt ihr verkünden?",
+                    custom_id="create_voting_text",
+                    required=True,
                     placeholder="Liebe Mitbürger..."
                 ),
                 dc.TextInput(
-                    style = dc.TextStyleType.SHORT,
-                    label = "Wie viel Entscheidungen habt ihr zu bieten?",
-                    custom_id = "create_voting_count",
-                    required = True,
-                    max_length = 2
+                    style=dc.TextStyleType.SHORT,
+                    label="Wie viel Entscheidungen habt ihr zu bieten?",
+                    custom_id="create_voting_count",
+                    required=True,
+                    max_length=2
                 ),
                 dc.TextInput(
                     style=dc.TextStyleType.SHORT,
@@ -410,8 +419,9 @@ async def votings(ctx : dc.CommandContext, aktion : str):
         )
         await ctx.popup(edit_voting_modal)
 
+
 @bot.modal("mod_create_voting")
-async def create_voting_response(ctx : dc.CommandContext, text : str, count : str, deadline : str):
+async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, deadline: str):
     if int(count) > 10:
         await ctx.send("Entschuldige, mehr als 10 Möglichkeiten sind aktuell nicht verfügbar.", ephemeral=True),
         return
@@ -445,19 +455,19 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     end_time = strftime("%d.%m.") + "- " + \
         strftime("%d.%m. %H:%M", localtime(int(end_time)))
 
-    server : dc.Guild = await ctx.get_guild()
-    minecrafter_role : dc.Role = await server.get_role(918574604858048532)
+    server: dc.Guild = await ctx.get_guild()
+    minecrafter_role: dc.Role = await server.get_role(918574604858048532)
     voting_embed = dc.Embed(
-        title= "Liebe Mitbürger",
+        title="Liebe Mitbürger",
         description=f"\n{text}",
         color=0xdaa520,
         author=dc.EmbedAuthor(
-        name=f"{ctx.author.user.username}, {end_time} ({deadline} {time_type})"),
+            name=f"{ctx.author.user.username}, {end_time} ({deadline} {time_type})"),
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
     await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
-    sent_message = await channel.send(content = minecrafter_role.mention, embeds=voting_embed)
+    sent_message = await channel.send(content=minecrafter_role.mention, embeds=voting_embed)
     emote_index = 0
     global emote_chars
     while int(count) > emote_index:
@@ -466,8 +476,9 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     data["votings"][str(identifier)]["message_id"] = str(sent_message.id)
     json_dump(data)
 
+
 @bot.modal("mod_delete_voting")
-async def delete_voting_response(ctx : dc.CommandContext, id : str):
+async def delete_voting_response(ctx: dc.CommandContext, id: str):
     try:
         int(id)
     except ValueError:
@@ -496,8 +507,9 @@ async def delete_voting_response(ctx : dc.CommandContext, id : str):
     json_dump(data)
     await ctx.send("Die Abstimmung wurde gelöscht.", ephemeral=True)
 
+
 @bot.modal("mod_edit_voting")
-async def edit_voting_response(ctx : dc.CommandContext, id : str, text : str):
+async def edit_voting_response(ctx: dc.CommandContext, id: str, text: str):
     try:
         int(id)
     except ValueError:
@@ -517,13 +529,14 @@ async def edit_voting_response(ctx : dc.CommandContext, id : str, text : str):
     voting_channel: dc.Channel = await ctx.get_channel()
     voting_message: dc.Message = await voting_channel.get_message(data["votings"][id]["message_id"])
     message_embed: dc.Embed = voting_message.embeds[0]
-    text = message_embed.description if type(text) is None or text == " " else text
+    text = message_embed.description if type(
+        text) is None or text == " " else text
     if not "bearbeitet" in text:
         text = text + "\n*bearbeitet*"
     message_embed.description = text
-    server : dc.Guild = await ctx.get_guild()
-    minecrafter_role : dc.Role = await server.get_role(918574604858048532)
-    await voting_message.edit(content = minecrafter_role.mention, embeds=message_embed)
+    server: dc.Guild = await ctx.get_guild()
+    minecrafter_role: dc.Role = await server.get_role(918574604858048532)
+    await voting_message.edit(content=minecrafter_role.mention, embeds=message_embed)
     await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
 bot.start()
