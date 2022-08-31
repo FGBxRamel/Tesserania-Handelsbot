@@ -50,7 +50,6 @@ async def automatic_delete(oneshot : bool = False) -> None:
     voting_channel = await get(bot, dc.Channel, channel_id=977550305157865472)
     current_time = time()
     delete_offer_ids, delete_voting_ids = [], []
-    global data
     for id, values in data["offers"].items():
         if values["deadline"] <= current_time:
             message = await offer_channel.get_message(int(values["message_id"]))
@@ -459,7 +458,6 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
     sent_message = await channel.send(content = minecrafter_role.mention, embeds=voting_embed)
     emote_index = 0
-    global emote_chars
     while int(count) > emote_index:
         await sent_message.create_reaction(emote_chars[emote_index])
         emote_index += 1
