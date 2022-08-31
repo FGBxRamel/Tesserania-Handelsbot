@@ -60,7 +60,7 @@ async def automatic_delete(oneshot : bool = False) -> None:
                 continue
             delete_offer_ids.append(id)
             data["count"][values["user_id"]] = data["count"][values["user_id"]] - 1
-    
+
     for id, values in data["votings"].items():
         if values["deadline"] <= current_time:
             message : dc.Message = await voting_channel.get_message(int(values["message_id"]))
@@ -75,7 +75,7 @@ async def automatic_delete(oneshot : bool = False) -> None:
             except TypeError:
                 continue
             delete_voting_ids.append(id)
-    
+
     for id in delete_offer_ids:
         del data["offers"][id]
     for id in delete_voting_ids:
@@ -433,7 +433,7 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     identifier = randint(1000, 9999)
     while identifier in data["votings"]:
         identifier = randint(1000, 9999)
-    
+
     data["votings"][str(identifier)] = {}
     data["votings"][str(identifier)]["user_id"] = str(ctx.author.id)
 
@@ -444,7 +444,7 @@ async def create_voting_response(ctx : dc.CommandContext, text : str, count : st
     bot._loop.call_later(wait_time, run_delete, True)
     end_time = strftime("%d.%m.") + "- " + \
         strftime("%d.%m. %H:%M", localtime(int(end_time)))
-    
+
     server : dc.Guild = await ctx.get_guild()
     minecrafter_role : dc.Role = await server.get_role(918574604858048532)
     voting_embed = dc.Embed(
