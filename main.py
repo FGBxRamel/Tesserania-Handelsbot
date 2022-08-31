@@ -300,9 +300,9 @@ async def edit_offer_id(ctx: dc.CommandContext, id: str, title: str, text: str):
     offer_channel: dc.Channel = await ctx.get_channel()
     offer_message: dc.Message = await offer_channel.get_message(data["offers"][id]["message_id"])
     message_embed: dc.Embed = offer_message.embeds[0]
-    if type(title) == None or title == " ":
+    if type(title) is None or title == " ":
         title = message_embed.title
-    if type(text) == None or text == " ":
+    if type(text) is None or text == " ":
         text = message_embed.description + "\n*bearbeitet*"
     else:
         text = f"{text}\n**Preis:** {data['offers'][id]['price']}\n*bearbeitet*"
@@ -517,7 +517,7 @@ async def edit_voting_response(ctx : dc.CommandContext, id : str, text : str):
     voting_channel: dc.Channel = await ctx.get_channel()
     voting_message: dc.Message = await voting_channel.get_message(data["votings"][id]["message_id"])
     message_embed: dc.Embed = voting_message.embeds[0]
-    text = message_embed.description if type(text) == None or text == " " else text
+    text = message_embed.description if type(text) is None or text == " " else text
     if not "bearbeitet" in text:
         text = text + "\n*bearbeitet*"
     message_embed.description = text
