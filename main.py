@@ -16,14 +16,14 @@ emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1
 open("data.json", "a").close()
 
 
-def implement(json):
-    data = {}
-    for key, value in json.items():
+def implement(json_object: dict) -> dict:
+    data_dict = {}
+    for key, value in json_object.items():
         if type(value) is dict and key in data:
-            data[key] = implement(value)
+            data_dict[key] = implement(value)
         else:
-            data[key] = value
-    return data
+            data_dict[key] = value
+    return data_dict
 
 
 def json_dump(data_dict: dict):
@@ -31,9 +31,9 @@ def json_dump(data_dict: dict):
         json.dump(data_dict, dump_file, indent=4)
 
 
-global data
 try:
-    data = implement(json.loads(open("data.json", "r+").read()))
+    with open("data.json", "r+") as data_file:
+        data = implement(json.load(data_file))
 except json.JSONDecodeError:
     data = {}
 if "offers" not in data:
@@ -52,7 +52,6 @@ async def automatic_delete(oneshot: bool = False) -> None:
     voting_channel = await get(bot, dc.Channel, channel_id=977550305157865472)
     current_time = time()
     delete_offer_ids, delete_voting_ids = [], []
-    global data
     for id, values in data["offers"].items():
         if values["deadline"] <= current_time:
             message = await offer_channel.get_message(int(values["message_id"]))
@@ -224,7 +223,7 @@ async def offer(ctx: dc.CommandContext, aktion: str):
 
 
 @bot.modal("mod_create_offer")
-async def create_offer_respone(ctx: dc.CommandContext, title: str, price: str, offer: str, deadline: str):
+async def create_offer_respone(ctx: dc.CommandContext, title: str, price: str, offer_text: str, deadline: str):
     identifier = randint(1000, 9999)
     while identifier in data["offers"]:
         identifier = randint(1000, 9999)
@@ -242,7 +241,7 @@ async def create_offer_respone(ctx: dc.CommandContext, title: str, price: str, o
         strftime("%d.%m.", localtime(end_time))
     app_embed = dc.Embed(
         title=title,
-        description=f"\n{offer}\n\n**Preis:** {price}",
+        description=f"\n{offer_text}\n\n**Preis:** {price}",
         color=0xdaa520,
         author=dc.EmbedAuthor(
             name=f"{ctx.author.user.username}, {end_time} ({deadline} Tage)"),
@@ -299,7 +298,7 @@ async def edit_offer_id(ctx: dc.CommandContext, id: str, title: str, text: str):
         await ctx.send(
             f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
         return
-    if not id in data["offers"]:
+    if id not in data["offers"]:
         await ctx.send("Diese ID existiert nicht!", ephemeral=True)
         return
     if not data["offers"][id]["user_id"] == str(ctx.author.id):
@@ -470,7 +469,6 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
     await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
     sent_message = await channel.send(content=minecrafter_role.mention, embeds=voting_embed)
     emote_index = 0
-    global emote_chars
     while int(count) > emote_index:
         await sent_message.create_reaction(emote_chars[emote_index])
         emote_index += 1
@@ -532,7 +530,7 @@ async def edit_voting_response(ctx: dc.CommandContext, id: str, text: str):
     message_embed: dc.Embed = voting_message.embeds[0]
     text = message_embed.description if type(
         text) is None or text == " " else text
-    if not "bearbeitet" in text:
+    if "bearbeitet" not in text:
         text = text + "\n*bearbeitet*"
     message_embed.description = text
     server: dc.Guild = await ctx.get_guild()
