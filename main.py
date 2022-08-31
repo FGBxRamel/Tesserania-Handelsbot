@@ -19,7 +19,7 @@ open("data.json", "a").close()
 def implement(json):
     data = {}
     for key, value in json.items():
-        if type(value) == dict and key in data:
+        if type(value) is dict and key in data:
             data[key] = implement(value)
         else:
             data[key] = value
@@ -531,7 +531,7 @@ async def edit_voting_response(ctx: dc.CommandContext, id: str, text: str):
     voting_message: dc.Message = await voting_channel.get_message(data["votings"][id]["message_id"])
     message_embed: dc.Embed = voting_message.embeds[0]
     text = message_embed.description if type(
-        text) == None or text == " " else text
+        text) is None or text == " " else text
     if not "bearbeitet" in text:
         text = text + "\n*bearbeitet*"
     message_embed.description = text
