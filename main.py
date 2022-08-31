@@ -423,7 +423,7 @@ async def votings(ctx: dc.CommandContext, aktion: str):
 @bot.modal("mod_create_voting")
 async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, deadline: str):
     if int(count) > 10:
-        await ctx.send("""Entschuldige, mehr als 10 Möglichkeiten 
+        await ctx.send("""Entschuldige, mehr als 10 Möglichkeiten
             sind aktuell nicht verfügbar.""", ephemeral=True)
         return
     time_type = "Tag(e)"
