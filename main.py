@@ -4,8 +4,11 @@ from random import randint
 from time import strptime, time, strftime, localtime, mktime
 from interactions.ext.get import get
 
+with open("token.txt", "r") as token_file:
+    token = token_file.read()
+
 bot = dc.Client(
-    token="OTkzOTEyNTQ0NDcxMjk0MDUz.G0J-ya.5wMd30w_hydD_vR7j-DS1VRjQbQF4RRJVH-hH4")
+    token=token)
 
 scope_ids = [993913459169300540, 918559612813324340]
 privileged_roles = ["918561303184965702", "918560437958742106"]
@@ -19,7 +22,7 @@ open("data.json", "a").close()
 def implement(json_object: dict) -> dict:
     data_dict = {}
     for key, value in json_object.items():
-        if type(value) is dict and key in data:
+        if type(value) is dict and key in data_dict:
             data_dict[key] = implement(value)
         else:
             data_dict[key] = value
@@ -136,10 +139,16 @@ async def test(ctx: dc.CommandContext):
                     value="edit"
                 )
             ]
+        ),
+        dc.Option(
+            name="id",
+            description="Die ID des Angebots. Optional beim bearbeiten.",
+            type=dc.OptionType.INTEGER,
+            required=False
         )
     ]
 )
-async def offer(ctx: dc.CommandContext, aktion: str):
+async def offer(ctx: dc.CommandContext, aktion: str, id: int = None):
     if aktion == "create":
         if not str(ctx.author.id) in data["count"]:
             data["count"][str(ctx.author.id)] = 0
@@ -195,30 +204,50 @@ async def offer(ctx: dc.CommandContext, aktion: str):
         )
         await ctx.popup(delete_modal)
     elif aktion == "edit":
-        edit_id_modal = dc.Modal(
-            title="Angebot bearbeiten",
-            custom_id="mod_edit_offer",
-            components=[
-                dc.TextInput(
-                    style=dc.TextStyleType.SHORT,
-                    label="ID des Angebots",
-                    custom_id="edit_offer_id",
-                    required=True,
-                    min_length=4,
-                    max_length=4
-                ),
-                dc.TextInput(
-                    style=dc.TextStyleType.SHORT,
-                    label="Titel",
-                    custom_id="edit_offer_title",
-                ),
-                dc.TextInput(
-                    style=dc.TextStyleType.PARAGRAPH,
-                    label="Angebotstext",
-                    custom_id="edit_offer_text"
-                )
-            ]
-        )
+        if id is None:
+            edit_id_modal = dc.Modal(
+                title="Angebot bearbeiten",
+                custom_id="mod_edit_offer",
+                components=[
+                    dc.TextInput(
+                        style=dc.TextStyleType.SHORT,
+                        label="ID des Angebots",
+                        custom_id="edit_offer_id",
+                        required=True,
+                        min_length=4,
+                        max_length=4
+                    ),
+                    dc.TextInput(
+                        style=dc.TextStyleType.SHORT,
+                        label="Titel",
+                        custom_id="edit_offer_title",
+                    ),
+                    dc.TextInput(
+                        style=dc.TextStyleType.PARAGRAPH,
+                        label="Angebotstext",
+                        custom_id="edit_offer_text"
+                    )
+                ]
+            )
+        else:
+            edit_id_modal = dc.Modal(
+                title="Angebot bearbeiten",
+                custom_id="mod_edit_offer",
+                components=[
+                    dc.TextInput(
+                        style=dc.TextStyleType.SHORT,
+                        label="Titel",
+                        custom_id="edit_offer_title",
+                        value=data["offers"][str(id)]["title"]
+                    ),
+                    dc.TextInput(
+                        style=dc.TextStyleType.PARAGRAPH,
+                        label="Angebotstext",
+                        custom_id="edit_offer_text",
+                        value=data["offers"][str(id)]["text"]
+                    )
+                ]
+            )
         await ctx.popup(edit_id_modal)
 
 
@@ -230,6 +259,7 @@ async def create_offer_respone(ctx: dc.CommandContext, title: str, price: str, o
     data["offers"][str(identifier)] = {}
     data["offers"][str(identifier)]["user_id"] = str(ctx.author.id)
     data["offers"][str(identifier)]["price"] = str(price)
+    data["offers"][str(identifier)]["text"] = str(offer_text)
     if int(deadline) < 1:
         deadline = 1
     elif int(deadline) > 7:
@@ -346,10 +376,16 @@ async def edit_offer_id(ctx: dc.CommandContext, id: str, title: str, text: str):
                     value="edit"
                 )
             ]
-        )
+        ),
+        dc.Option(
+            name="id",
+            description="Die ID der Abstimmung. Optional beim bearbeiten.",
+            type=dc.OptionType.INTEGER,
+            required=False
+        ),
     ]
 )
-async def votings(ctx: dc.CommandContext, aktion: str):
+async def votings(ctx: dc.CommandContext, aktion: str, id: int = None):
     if aktion == "create":
         create_voting_modal = dc.Modal(
             title="Abstimmung erstellen",
@@ -396,26 +432,50 @@ async def votings(ctx: dc.CommandContext, aktion: str):
         )
         await ctx.popup(delete_modal)
     elif aktion == "edit":
-        edit_voting_modal = dc.Modal(
-            title="Abstimmung bearbeiten",
-            custom_id="mod_edit_voting",
-            components=[
-                dc.TextInput(
-                    style=dc.TextStyleType.SHORT,
-                    label="ID der Abstimmmung",
-                    custom_id="edit_voting_id",
-                    required=True,
-                    min_length=4,
-                    max_length=4
-                ),
-                dc.TextInput(
-                    style=dc.TextStyleType.PARAGRAPH,
-                    label="Abstimmungstext",
-                    custom_id="edit_voting_text",
-                    required=True
-                )
-            ]
-        )
+        if id is None:
+            edit_voting_modal = dc.Modal(
+                title="Abstimmung bearbeiten",
+                custom_id="mod_edit_voting",
+                components=[
+                    dc.TextInput(
+                        style=dc.TextStyleType.SHORT,
+                        label="ID der Abstimmmung",
+                        custom_id="edit_voting_id",
+                        required=True,
+                        min_length=4,
+                        max_length=4
+                    ),
+                    dc.TextInput(
+                        style=dc.TextStyleType.PARAGRAPH,
+                        label="Abstimmungstext",
+                        custom_id="edit_voting_text",
+                        required=True
+                    )
+                ]
+            )
+        else:
+            edit_voting_modal = dc.Modal(
+                title="Abstimmung bearbeiten",
+                custom_id="mod_edit_voting",
+                components=[
+                    dc.TextInput(
+                        style=dc.TextStyleType.SHORT,
+                        label="ID der Abstimmmung",
+                        custom_id="edit_voting_id",
+                        required=True,
+                        min_length=4,
+                        max_length=4,
+                        value=str(id)
+                    ),
+                    dc.TextInput(
+                        style=dc.TextStyleType.PARAGRAPH,
+                        label="Abstimmungstext",
+                        custom_id="edit_voting_text",
+                        required=True,
+                        value=data["votings"][str(id)]["text"]
+                    )
+                ]
+            )
         await ctx.popup(edit_voting_modal)
 
 
@@ -446,6 +506,7 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
 
     data["votings"][str(identifier)] = {}
     data["votings"][str(identifier)]["user_id"] = str(ctx.author.id)
+    data["votings"][str(identifier)]["text"] = text
 
     count = 2 if int(count) < 2 else count
     end_time = time() + float(deadline) * time_in_seconds
