@@ -4,6 +4,7 @@ from random import randint
 from time import strptime, time, strftime, localtime, mktime
 from interactions.ext.get import get
 
+token = ""
 with open("token.txt", "r") as token_file:
     token = token_file.read()
 
