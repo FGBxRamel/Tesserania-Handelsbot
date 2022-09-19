@@ -4,12 +4,11 @@ from random import randint
 from time import strptime, time, strftime, localtime, mktime
 from interactions.ext.get import get
 
-token = ""
 with open("token.txt", "r") as token_file:
-    token = token_file.read()
+    TOKEN = token_file.read().replace("\n", "")
 
 bot = dc.Client(
-    token=token)
+    token=TOKEN)
 
 scope_ids = [993913459169300540, 918559612813324340]
 privileged_roles = ["918561303184965702", "918560437958742106"]
