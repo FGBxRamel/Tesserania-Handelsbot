@@ -527,7 +527,7 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
-    await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
+    await ctx.send("Die Abstimmung wurde entgegen genommen.", ephemeral=True)
     sent_message = await channel.send(content=minecrafter_role.mention, embeds=voting_embed)
     emote_index = 0
     while int(count) > emote_index:
