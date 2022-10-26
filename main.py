@@ -490,6 +490,10 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         time_in_seconds = 3600
         deadline = deadline.replace("h", "")
         time_type = "Stunde(n)"
+    elif "m" in deadline:
+        time_in_seconds = 60
+        deadline = deadline.replace("m", "")
+        time_type = "Minute(n)"
     else:
         time_in_seconds = 86400
         deadline = deadline.replace("d", "")
