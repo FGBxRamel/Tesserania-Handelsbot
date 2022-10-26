@@ -495,8 +495,8 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         deadline = deadline.replace("d", "")
     deadline = deadline.replace(",", ".")
     try:
-        if float(deadline) < 1:
-            deadline = 1
+        if float(deadline) < 0:
+            deadline = abs(deadline)
     except ValueError:
         await ctx.send("Die Uhrzeit hat ein falsches Format.", ephemeral=True)
         return
