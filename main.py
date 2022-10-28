@@ -62,6 +62,21 @@ if "votings" not in data:
     data["votings"] = {}
 json_dump(data)
 
+def evaluate_voting(message: dc.Message) -> str:
+    """Returns the message embed with the voting result appended."""
+    winner, winner_count = "", 0
+    try:
+        winner, winner_count = "", 0
+        for reaction in message.reactions:
+            if int(reaction["count"]) > winner_count:
+                winner, winner_count = reaction["emoji"]["name"], int(
+                    reaction["count"])
+    except TypeError:
+        pass
+    message_embed: dc.Embed = message.embeds[0]
+    message_embed.description = message_embed.description + \
+        f"\n\n**Ergebnis:** {winner}"
+    return message_embed
 
 async def automatic_delete(oneshot: bool = False) -> None:
     if not oneshot:
@@ -84,18 +99,8 @@ async def automatic_delete(oneshot: bool = False) -> None:
     for id, values in data["votings"].items():
         if values["deadline"] <= current_time:
             message: dc.Message = await voting_channel.get_message(int(values["message_id"]))
-            try:
-                winner, winner_count = "", 0
-                for reaction in message.reactions:
-                    if int(reaction["count"]) > winner_count:
-                        winner, winner_count = reaction["emoji"]["name"], int(
-                            reaction["count"])
-                message_embed: dc.Embed = message.embeds[0]
-                message_embed.description = message_embed.description + \
-                    f"\n\n**Ergebnis:** {winner}"
-                await message.edit(embeds=message_embed)
-            except TypeError:
-                continue
+            message_embed = evaluate_voting(message)
+            await message.edit(embeds=message_embed)
             delete_voting_ids.append(id)
 
     for id in delete_offer_ids:
@@ -282,7 +287,7 @@ async def create_offer_respone(ctx: dc.CommandContext, title: str, price: str, o
         description=f"\n{offer_text}\n\n**Preis:** {price}",
         color=0xdaa520,
         author=dc.EmbedAuthor(
-            name=f"{ctx.author.user.username}, {end_time} ({deadline} Tage)"),
+            name=f"{ctx.author.nick}, {end_time} ({deadline} Tage)"),
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
@@ -376,6 +381,10 @@ async def edit_offer_id(ctx: dc.CommandContext, title: str, text: str, id: str =
                 dc.Choice(
                     name="bearbeiten",
                     value="edit"
+                ),
+                dc.Choice(
+                    name="beenden",
+                    value="close"
                 )
             ]
         ),
@@ -479,7 +488,22 @@ async def votings(ctx: dc.CommandContext, aktion: str, id: int = None):
                 ]
             )
         await ctx.popup(edit_voting_modal)
-
+    elif aktion == "close":
+        close_modal = dc.Modal(
+            title="Abstimmung beenden",
+            custom_id="mod_close_voting",
+            components=[
+                dc.TextInput(
+                    style=dc.TextStyleType.SHORT,
+                    label="ID der Abstimmung",
+                    custom_id="close_voting_id",
+                    required=True,
+                    min_length=4,
+                    max_length=4
+                )
+            ]
+        )
+        await ctx.popup(close_modal)
 
 @bot.modal("mod_create_voting")
 async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, deadline: str):
@@ -529,7 +553,7 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         description=f"\n{text}",
         color=0xdaa520,
         author=dc.EmbedAuthor(
-            name=f"{ctx.author.user.username}, {end_time} ({deadline} {time_type})"),
+            name=f"{ctx.author.nick}, {end_time} ({deadline} {time_type})"),
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
@@ -599,5 +623,34 @@ async def edit_voting_response(ctx: dc.CommandContext, id: str, text: str):
     voting_role_to_ping: dc.Role = await server.get_role(voting_role_to_ping_id)
     await voting_message.edit(content=voting_role_to_ping.mention, embeds=message_embed)
     await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
+
+@bot.modal("mod_close_voting")
+async def close_voting_response(ctx: dc.CommandContext, id: str):
+    try:
+        int(id)
+    except ValueError:
+        await ctx.send("Die ID hat ein fehlerhaftes Format!", ephemeral=True)
+        return
+    except BaseException as e:
+        await ctx.send(
+            f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
+        return
+    if id not in data["votings"]:
+        await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
+        return
+    if not data["votings"][id]["user_id"] == str(ctx.author.id) and not user_is_privileged(ctx.author.roles):
+        await ctx.send("Du bist nicht berechtigt diese Abstimmung zu beenden!",
+                       ephemeral=True)
+        return
+    votings_channel: dc.Channel = await ctx.get_channel()
+    voting_message: dc.Message = await votings_channel.get_message(data["votings"][id]["message_id"])
+    message_embed: dc.Embed = evaluate_voting(voting_message)
+    current_time_formatted = strftime("%d.%m. %H:%M")
+    message_embed.description = "**Diese Abstimmung wurde vorzeitig beendet!**\n" \
+        + f"{ctx.author.nick}, {current_time_formatted}" \
+        + "\n\n" + message_embed.description
+    del data["votings"][id]
+    json_dump(data)
+    await ctx.send("Die Abstimmung wurde beendet.", ephemeral=True)
 
 bot.start()
