@@ -12,7 +12,7 @@ with open('config.ini', 'r') as config_file:
 
     TOKEN = config.get('General', 'token')
     server_ids = config.get('IDs', 'server').split(',')
-    privileged_roles_ids = config.get('IDs', 'privileged_roles').split(',')
+    privileged_roles_ids = [int(id) for id in config.get('IDs', 'privileged_roles').split(',')]
     offer_channel_id = int(config.get('IDs', 'offer_channel'))
     voting_channel_id = int(config.get('IDs', 'voting_channel'))
     voting_role_to_ping_id = int(config.get('IDs', 'voting_role_to_ping'))
@@ -22,7 +22,6 @@ bot = dc.Client(
     token=TOKEN)
 
 scope_ids = server_ids
-privileged_roles = privileged_roles_ids
 run = False
 emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA",
                "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
@@ -40,10 +39,15 @@ def implement(json_object: dict) -> dict:
     return data_dict
 
 
-def json_dump(data_dict: dict):
+def json_dump(data_dict: dict) -> None:
     with open("data.json", "w+") as dump_file:
         json.dump(data_dict, dump_file, indent=4)
 
+def user_is_privileged(roles: list) -> bool:
+    for role in roles:
+        if role in privileged_roles_ids:
+            return True
+    return False
 
 try:
     with open("data.json", "r+") as data_file:
@@ -215,50 +219,43 @@ async def offer(ctx: dc.CommandContext, aktion: str, id: int = None):
         )
         await ctx.popup(delete_modal)
     elif aktion == "edit":
-        if id is None:
-            edit_id_modal = dc.Modal(
-                title="Angebot bearbeiten",
-                custom_id="mod_edit_offer",
-                components=[
-                    dc.TextInput(
+        edit_id_modal = dc.Modal(
+            title="Angebot bearbeiten",
+            ustom_id="mod_edit_offer",
+            components=[
+                dc.TextInput(
+                    style=dc.TextStyleType.SHORT,
+                    label="Titel",
+                    custom_id="edit_offer_title",
+                    value=data["offers"][str(id)]["title"]
+                ),
+                dc.TextInput(
+                    style=dc.TextStyleType.PARAGRAPH,
+                    label="Angebotstext",
+                    custom_id="edit_offer_text",
+                    value=data["offers"][str(id)]["text"]
+                ),
+                dc.TextInput(
                         style=dc.TextStyleType.SHORT,
                         label="ID des Angebots",
                         custom_id="edit_offer_id",
                         required=True,
                         min_length=4,
                         max_length=4
-                    ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
-                        label="Titel",
-                        custom_id="edit_offer_title",
-                    ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.PARAGRAPH,
-                        label="Angebotstext",
-                        custom_id="edit_offer_text"
                     )
-                ]
-            )
-        else:
-            edit_id_modal = dc.Modal(
-                title="Angebot bearbeiten",
-                custom_id="mod_edit_offer",
-                components=[
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
-                        label="Titel",
-                        custom_id="edit_offer_title",
-                        value=data["offers"][str(id)]["title"]
-                    ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.PARAGRAPH,
-                        label="Angebotstext",
-                        custom_id="edit_offer_text",
-                        value=data["offers"][str(id)]["text"]
-                    )
-                ]
-            )
+            ]
+        )
+        #if id is None:
+            #edit_id_modal.components.append(
+            #    dc.TextInput(
+            #            style=dc.TextStyleType.SHORT,
+            #            label="ID des Angebots",
+            #            custom_id="edit_offer_id",
+            #            required=True,
+            #            min_length=4,
+            #            max_length=4
+            #        )
+            #)
         await ctx.popup(edit_id_modal)
 
 
@@ -310,12 +307,7 @@ async def delete_offer_response(ctx: dc.CommandContext, id: str):
     if id not in data["offers"]:
         await ctx.send("Diese ID existiert nicht!", ephemeral=True)
         return
-    user_privilege = False
-    for role in ctx.author.roles:
-        if str(role) in privileged_roles:
-            user_privilege = True
-            break
-    if not data["offers"][id]["user_id"] == str(ctx.author.id) and not user_privilege:
+    if not data["offers"][id]["user_id"] == str(ctx.author.id) and not user_is_privileged(ctx.author.roles):
         await ctx.send("Du bist nicht berechtigt dieses Angebot zu löschen!",
                        ephemeral=True)
         return
@@ -329,7 +321,7 @@ async def delete_offer_response(ctx: dc.CommandContext, id: str):
 
 
 @bot.modal("mod_edit_offer")
-async def edit_offer_id(ctx: dc.CommandContext, id: str, title: str, text: str):
+async def edit_offer_id(ctx: dc.CommandContext, title: str, text: str, id: str = ""):
     try:
         int(id)
     except ValueError:
@@ -359,7 +351,6 @@ async def edit_offer_id(ctx: dc.CommandContext, id: str, title: str, text: str):
     message_embed.description = text
     await offer_message.edit(embeds=message_embed)
     await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
-
 
 # ---Abstimmungen---
 
@@ -566,12 +557,7 @@ async def delete_voting_response(ctx: dc.CommandContext, id: str):
     if id not in data["votings"]:
         await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
         return
-    user_privilege = False
-    for role in ctx.author.roles:
-        if str(role) in privileged_roles:
-            user_privilege = True
-            break
-    if not data["votings"][id]["user_id"] == str(ctx.author.id) and not user_privilege:
+    if not data["votings"][id]["user_id"] == str(ctx.author.id) and not user_is_privileged(ctx.author.roles):
         await ctx.send("Du bist nicht berechtigt diese Abstimmung zu löschen!",
                        ephemeral=True)
         return
