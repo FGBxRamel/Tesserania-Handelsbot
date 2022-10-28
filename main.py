@@ -1,17 +1,28 @@
+import configparser as cp
 import json
-import interactions as dc
 from random import randint
-from time import strptime, time, strftime, localtime, mktime
+from time import localtime, mktime, strftime, strptime, time
+
+import interactions as dc
 from interactions.ext.get import get
 
-with open("token.txt", "r") as token_file:
-    TOKEN = token_file.read().replace("\n", "")
+with open('config.ini', 'r') as config_file:
+    config = cp.ConfigParser()
+    config.read_file(config_file)
+
+    TOKEN = config.get('General', 'token')
+    server_ids = config.get('IDs', 'server').split(',')
+    privileged_roles_ids = config.get('IDs', 'privileged_roles').split(',')
+    offer_channel_id = int(config.get('IDs', 'offer_channel'))
+    voting_channel_id = int(config.get('IDs', 'voting_channel'))
+    voting_role_to_ping_id = int(config.get('IDs', 'voting_role_to_ping'))
+
 
 bot = dc.Client(
     token=TOKEN)
 
-scope_ids = [993913459169300540, 918559612813324340]
-privileged_roles = ["918561303184965702", "918560437958742106"]
+scope_ids = server_ids
+privileged_roles = privileged_roles_ids
 run = False
 emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA",
                "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
@@ -51,8 +62,8 @@ json_dump(data)
 async def automatic_delete(oneshot: bool = False) -> None:
     if not oneshot:
         bot._loop.call_later(86400, run_delete)
-    offer_channel = await get(bot, dc.Channel, channel_id=988492568344014908)
-    voting_channel = await get(bot, dc.Channel, channel_id=977550305157865472)
+    offer_channel = await get(bot, dc.Channel, channel_id=offer_channel_id)
+    voting_channel = await get(bot, dc.Channel, channel_id=voting_channel_id)
     current_time = time()
     delete_offer_ids, delete_voting_ids = [], []
     for id, values in data["offers"].items():
@@ -517,7 +528,7 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         strftime("%d.%m. %H:%M", localtime(int(end_time)))
 
     server: dc.Guild = await ctx.get_guild()
-    minecrafter_role: dc.Role = await server.get_role(918574604858048532)
+    voting_role_to_ping: dc.Role = await server.get_role(voting_role_to_ping_id)
     voting_embed = dc.Embed(
         title="Liebe Mitbürger",
         description=f"\n{text}",
@@ -528,7 +539,7 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
     )
     channel = await ctx.get_channel()
     await ctx.send("Die Abstimmung wurde entgegen genommen.", ephemeral=True)
-    sent_message = await channel.send(content=minecrafter_role.mention, embeds=voting_embed)
+    sent_message = await channel.send(content=voting_role_to_ping.mention, embeds=voting_embed)
     emote_index = 0
     while int(count) > emote_index:
         await sent_message.create_reaction(emote_chars[emote_index])
@@ -595,8 +606,8 @@ async def edit_voting_response(ctx: dc.CommandContext, id: str, text: str):
         text = text + "\n*bearbeitet*"
     message_embed.description = text
     server: dc.Guild = await ctx.get_guild()
-    minecrafter_role: dc.Role = await server.get_role(918574604858048532)
-    await voting_message.edit(content=minecrafter_role.mention, embeds=message_embed)
+    voting_role_to_ping: dc.Role = await server.get_role(voting_role_to_ping_id)
+    await voting_message.edit(content=voting_role_to_ping.mention, embeds=message_embed)
     await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
 bot.start()
