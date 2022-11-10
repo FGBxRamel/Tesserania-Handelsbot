@@ -649,6 +649,7 @@ async def close_voting_response(ctx: dc.CommandContext, id: str):
     message_embed.description = "**Diese Abstimmung wurde vorzeitig beendet!**\n" \
         + f"{ctx.author.nick}, {current_time_formatted}" \
         + "\n\n" + message_embed.description
+    await voting_message.edit(embeds=message_embed)
     del data["votings"][id]
     json_dump(data)
     await ctx.send("Die Abstimmung wurde beendet.", ephemeral=True)
