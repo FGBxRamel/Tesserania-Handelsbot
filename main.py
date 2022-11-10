@@ -46,10 +46,7 @@ def json_dump(data_dict: dict) -> None:
 
 
 def user_is_privileged(roles: list) -> bool:
-    for role in roles:
-        if role in privileged_roles_ids:
-            return True
-    return False
+    return any(role in privileged_roles_ids for role in roles)
 
 
 try:
@@ -249,17 +246,6 @@ async def offer(ctx: dc.CommandContext, aktion: str):
                 )
             ]
         )
-        # if id is None:
-        # edit_id_modal.components.append(
-        #    dc.TextInput(
-        #            style=dc.TextStyleType.SHORT,
-        #            label="ID des Angebots",
-        #            custom_id="edit_offer_id",
-        #            required=True,
-        #            min_length=4,
-        #            max_length=4
-        #        )
-        # )
         await ctx.popup(edit_id_modal)
 
 
