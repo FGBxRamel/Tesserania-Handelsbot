@@ -12,7 +12,8 @@ with open('config.ini', 'r') as config_file:
 
     TOKEN = config.get('General', 'token')
     server_ids = config.get('IDs', 'server').split(',')
-    privileged_roles_ids = [int(id) for id in config.get('IDs', 'privileged_roles').split(',')]
+    privileged_roles_ids = [int(id) for id in config.get(
+        'IDs', 'privileged_roles').split(',')]
     offer_channel_id = int(config.get('IDs', 'offer_channel'))
     voting_channel_id = int(config.get('IDs', 'voting_channel'))
     voting_role_to_ping_id = int(config.get('IDs', 'voting_role_to_ping'))
@@ -43,11 +44,13 @@ def json_dump(data_dict: dict) -> None:
     with open("data.json", "w+") as dump_file:
         json.dump(data_dict, dump_file, indent=4)
 
+
 def user_is_privileged(roles: list) -> bool:
     for role in roles:
         if role in privileged_roles_ids:
             return True
     return False
+
 
 try:
     with open("data.json", "r+") as data_file:
@@ -61,6 +64,7 @@ if "count" not in data:
 if "votings" not in data:
     data["votings"] = {}
 json_dump(data)
+
 
 def evaluate_voting(message: dc.Message) -> str:
     """Returns the message embed with the voting result appended."""
@@ -77,6 +81,7 @@ def evaluate_voting(message: dc.Message) -> str:
     message_embed.description = message_embed.description + \
         f"\n\n**Ergebnis:** {winner}"
     return message_embed
+
 
 async def automatic_delete(oneshot: bool = False) -> None:
     if not oneshot:
@@ -235,26 +240,26 @@ async def offer(ctx: dc.CommandContext, aktion: str):
                     value=data["offers"][str(id)]["text"]
                 ),
                 dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
-                        label="ID des Angebots",
-                        custom_id="edit_offer_id",
-                        required=True,
-                        min_length=4,
-                        max_length=4
-                    )
+                    style=dc.TextStyleType.SHORT,
+                    label="ID des Angebots",
+                    custom_id="edit_offer_id",
+                    required=True,
+                    min_length=4,
+                    max_length=4
+                )
             ]
         )
-        #if id is None:
-            #edit_id_modal.components.append(
-            #    dc.TextInput(
-            #            style=dc.TextStyleType.SHORT,
-            #            label="ID des Angebots",
-            #            custom_id="edit_offer_id",
-            #            required=True,
-            #            min_length=4,
-            #            max_length=4
-            #        )
-            #)
+        # if id is None:
+        # edit_id_modal.components.append(
+        #    dc.TextInput(
+        #            style=dc.TextStyleType.SHORT,
+        #            label="ID des Angebots",
+        #            custom_id="edit_offer_id",
+        #            required=True,
+        #            min_length=4,
+        #            max_length=4
+        #        )
+        # )
         await ctx.popup(edit_id_modal)
 
 
@@ -352,6 +357,7 @@ async def edit_offer_id(ctx: dc.CommandContext, title: str, text: str, id: str =
     await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
 # ---Abstimmungen---
+
 
 @bot.command(
     name="abstimmung",
@@ -493,6 +499,7 @@ async def votings(ctx: dc.CommandContext, aktion: str):
         )
         await ctx.popup(close_modal)
 
+
 @bot.modal("mod_create_voting")
 async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, deadline: str):
     if int(count) > 10:
@@ -614,6 +621,7 @@ async def edit_voting_response(ctx: dc.CommandContext, id: str, text: str):
     voting_role_to_ping: dc.Role = await server.get_role(voting_role_to_ping_id)
     await voting_message.edit(content=voting_role_to_ping.mention, embeds=message_embed)
     await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
+
 
 @bot.modal("mod_close_voting")
 async def close_voting_response(ctx: dc.CommandContext, id: str):
