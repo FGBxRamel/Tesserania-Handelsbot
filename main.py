@@ -12,7 +12,8 @@ with open('config.ini', 'r') as config_file:
 
     TOKEN = config.get('General', 'token')
     server_ids = config.get('IDs', 'server').split(',')
-    privileged_roles_ids = config.get('IDs', 'privileged_roles').split(',')
+    privileged_roles_ids = [int(id) for id in config.get(
+        'IDs', 'privileged_roles').split(',')]
     offer_channel_id = int(config.get('IDs', 'offer_channel'))
     voting_channel_id = int(config.get('IDs', 'voting_channel'))
     voting_role_to_ping_id = int(config.get('IDs', 'voting_role_to_ping'))
@@ -22,7 +23,6 @@ bot = dc.Client(
     token=TOKEN)
 
 scope_ids = server_ids
-privileged_roles = privileged_roles_ids
 run = False
 emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA",
                "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
@@ -40,9 +40,13 @@ def implement(json_object: dict) -> dict:
     return data_dict
 
 
-def json_dump(data_dict: dict):
+def json_dump(data_dict: dict) -> None:
     with open("data.json", "w+") as dump_file:
         json.dump(data_dict, dump_file, indent=4)
+
+
+def user_is_privileged(roles: list) -> bool:
+    return any(role in privileged_roles_ids for role in roles)
 
 
 try:
@@ -57,6 +61,23 @@ if "count" not in data:
 if "votings" not in data:
     data["votings"] = {}
 json_dump(data)
+
+
+def evaluate_voting(message: dc.Message) -> str:
+    """Returns the message embed with the voting result appended."""
+    winner, winner_count = "", 0
+    try:
+        winner, winner_count = "", 0
+        for reaction in message.reactions:
+            if int(reaction.count) > winner_count:
+                winner, winner_count = reaction.emoji.name, int(
+                    reaction.count)
+    except TypeError:
+        pass
+    message_embed: dc.Embed = message.embeds[0]
+    message_embed.description = message_embed.description + \
+        f"\n\n**Ergebnis:** {winner}"
+    return message_embed
 
 
 async def automatic_delete(oneshot: bool = False) -> None:
@@ -80,18 +101,8 @@ async def automatic_delete(oneshot: bool = False) -> None:
     for id, values in data["votings"].items():
         if values["deadline"] <= current_time:
             message: dc.Message = await voting_channel.get_message(int(values["message_id"]))
-            try:
-                winner, winner_count = "", 0
-                for reaction in message.reactions:
-                    if int(reaction["count"]) > winner_count:
-                        winner, winner_count = reaction["emoji"]["name"], int(
-                            reaction["count"])
-                message_embed: dc.Embed = message.embeds[0]
-                message_embed.description = message_embed.description + \
-                    f"\n\n**Ergebnis:** {winner}"
-                await message.edit(embeds=message_embed)
-            except TypeError:
-                continue
+            message_embed = evaluate_voting(message)
+            await message.edit(embeds=message_embed)
             delete_voting_ids.append(id)
 
     for id in delete_offer_ids:
@@ -150,16 +161,10 @@ async def test(ctx: dc.CommandContext):
                     value="edit"
                 )
             ]
-        ),
-        dc.Option(
-            name="id",
-            description="Die ID des Angebots. Optional beim bearbeiten.",
-            type=dc.OptionType.INTEGER,
-            required=False
         )
     ]
 )
-async def offer(ctx: dc.CommandContext, aktion: str, id: int = None):
+async def offer(ctx: dc.CommandContext, aktion: str):
     if aktion == "create":
         if not str(ctx.author.id) in data["count"]:
             data["count"][str(ctx.author.id)] = 0
@@ -215,50 +220,32 @@ async def offer(ctx: dc.CommandContext, aktion: str, id: int = None):
         )
         await ctx.popup(delete_modal)
     elif aktion == "edit":
-        if id is None:
-            edit_id_modal = dc.Modal(
-                title="Angebot bearbeiten",
-                custom_id="mod_edit_offer",
-                components=[
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
-                        label="ID des Angebots",
-                        custom_id="edit_offer_id",
-                        required=True,
-                        min_length=4,
-                        max_length=4
-                    ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
-                        label="Titel",
-                        custom_id="edit_offer_title",
-                    ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.PARAGRAPH,
-                        label="Angebotstext",
-                        custom_id="edit_offer_text"
-                    )
-                ]
-            )
-        else:
-            edit_id_modal = dc.Modal(
-                title="Angebot bearbeiten",
-                custom_id="mod_edit_offer",
-                components=[
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
-                        label="Titel",
-                        custom_id="edit_offer_title",
-                        value=data["offers"][str(id)]["title"]
-                    ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.PARAGRAPH,
-                        label="Angebotstext",
-                        custom_id="edit_offer_text",
-                        value=data["offers"][str(id)]["text"]
-                    )
-                ]
-            )
+        edit_id_modal = dc.Modal(
+            title="Angebot bearbeiten",
+            ustom_id="mod_edit_offer",
+            components=[
+                dc.TextInput(
+                    style=dc.TextStyleType.SHORT,
+                    label="Titel",
+                    custom_id="edit_offer_title",
+                    value=data["offers"][str(id)]["title"]
+                ),
+                dc.TextInput(
+                    style=dc.TextStyleType.PARAGRAPH,
+                    label="Angebotstext",
+                    custom_id="edit_offer_text",
+                    value=data["offers"][str(id)]["text"]
+                ),
+                dc.TextInput(
+                    style=dc.TextStyleType.SHORT,
+                    label="ID des Angebots",
+                    custom_id="edit_offer_id",
+                    required=True,
+                    min_length=4,
+                    max_length=4
+                )
+            ]
+        )
         await ctx.popup(edit_id_modal)
 
 
@@ -285,7 +272,7 @@ async def create_offer_respone(ctx: dc.CommandContext, title: str, price: str, o
         description=f"\n{offer_text}\n\n**Preis:** {price}",
         color=0xdaa520,
         author=dc.EmbedAuthor(
-            name=f"{ctx.author.user.username}, {end_time} ({deadline} Tage)"),
+            name=f"{ctx.user.username}, {end_time} ({deadline} Tage)"),
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
@@ -310,12 +297,7 @@ async def delete_offer_response(ctx: dc.CommandContext, id: str):
     if id not in data["offers"]:
         await ctx.send("Diese ID existiert nicht!", ephemeral=True)
         return
-    user_privilege = False
-    for role in ctx.author.roles:
-        if str(role) in privileged_roles:
-            user_privilege = True
-            break
-    if not data["offers"][id]["user_id"] == str(ctx.author.id) and not user_privilege:
+    if not data["offers"][id]["user_id"] == str(ctx.author.id) and not user_is_privileged(ctx.author.roles):
         await ctx.send("Du bist nicht berechtigt dieses Angebot zu löschen!",
                        ephemeral=True)
         return
@@ -329,7 +311,7 @@ async def delete_offer_response(ctx: dc.CommandContext, id: str):
 
 
 @bot.modal("mod_edit_offer")
-async def edit_offer_id(ctx: dc.CommandContext, id: str, title: str, text: str):
+async def edit_offer_id(ctx: dc.CommandContext, title: str, text: str, id: str = ""):
     try:
         int(id)
     except ValueError:
@@ -360,8 +342,8 @@ async def edit_offer_id(ctx: dc.CommandContext, id: str, title: str, text: str):
     await offer_message.edit(embeds=message_embed)
     await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
-
 # ---Abstimmungen---
+
 
 @bot.command(
     name="abstimmung",
@@ -385,18 +367,16 @@ async def edit_offer_id(ctx: dc.CommandContext, id: str, title: str, text: str):
                 dc.Choice(
                     name="bearbeiten",
                     value="edit"
+                ),
+                dc.Choice(
+                    name="beenden",
+                    value="close"
                 )
             ]
-        ),
-        dc.Option(
-            name="id",
-            description="Die ID der Abstimmung. Optional beim bearbeiten.",
-            type=dc.OptionType.INTEGER,
-            required=False
-        ),
+        )
     ]
 )
-async def votings(ctx: dc.CommandContext, aktion: str, id: int = None):
+async def votings(ctx: dc.CommandContext, aktion: str):
     if aktion == "create":
         create_voting_modal = dc.Modal(
             title="Abstimmung erstellen",
@@ -488,6 +468,22 @@ async def votings(ctx: dc.CommandContext, aktion: str, id: int = None):
                 ]
             )
         await ctx.popup(edit_voting_modal)
+    elif aktion == "close":
+        close_modal = dc.Modal(
+            title="Abstimmung beenden",
+            custom_id="mod_close_voting",
+            components=[
+                dc.TextInput(
+                    style=dc.TextStyleType.SHORT,
+                    label="ID der Abstimmung",
+                    custom_id="close_voting_id",
+                    required=True,
+                    min_length=4,
+                    max_length=4
+                )
+            ]
+        )
+        await ctx.popup(close_modal)
 
 
 @bot.modal("mod_create_voting")
@@ -501,13 +497,20 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         time_in_seconds = 3600
         deadline = deadline.replace("h", "")
         time_type = "Stunde(n)"
+    elif "m" in deadline:
+        time_in_seconds = 60
+        deadline = deadline.replace("m", "")
+        time_type = "Minute(n)"
     else:
         time_in_seconds = 86400
         deadline = deadline.replace("d", "")
     deadline = deadline.replace(",", ".")
     try:
-        if float(deadline) < 1:
-            deadline = 1
+        if float(deadline) < 0:
+            deadline = abs(deadline)
+        elif float(deadline) == 0:
+            await ctx.send("Entschuldige, aber 0 ist keine gültige Zahl.", ephemeral=True)
+            return
     except ValueError:
         await ctx.send("Die Uhrzeit hat ein falsches Format.", ephemeral=True)
         return
@@ -534,7 +537,7 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         description=f"\n{text}",
         color=0xdaa520,
         author=dc.EmbedAuthor(
-            name=f"{ctx.author.user.username}, {end_time} ({deadline} {time_type})"),
+            name=f"{ctx.user.username}, {end_time} ({deadline} {time_type})"),
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
@@ -562,18 +565,13 @@ async def delete_voting_response(ctx: dc.CommandContext, id: str):
     if id not in data["votings"]:
         await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
         return
-    user_privilege = False
-    for role in ctx.author.roles:
-        if str(role) in privileged_roles:
-            user_privilege = True
-            break
-    if not data["votings"][id]["user_id"] == str(ctx.author.id) and not user_privilege:
+    if not data["votings"][id]["user_id"] == str(ctx.author.id) and not user_is_privileged(ctx.author.roles):
         await ctx.send("Du bist nicht berechtigt diese Abstimmung zu löschen!",
                        ephemeral=True)
         return
     votings_channel: dc.Channel = await ctx.get_channel()
     voting_message: dc.Message = await votings_channel.get_message(data["votings"][id]["message_id"])
-    await voting_message.delete(reason=f"[Manuell] {ctx.author.user.username}")
+    await voting_message.delete(reason=f"[Manuell] {ctx.user.username}")
     del data["votings"][id]
     json_dump(data)
     await ctx.send("Die Abstimmung wurde gelöscht.", ephemeral=True)
@@ -609,5 +607,36 @@ async def edit_voting_response(ctx: dc.CommandContext, id: str, text: str):
     voting_role_to_ping: dc.Role = await server.get_role(voting_role_to_ping_id)
     await voting_message.edit(content=voting_role_to_ping.mention, embeds=message_embed)
     await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
+
+
+@bot.modal("mod_close_voting")
+async def close_voting_response(ctx: dc.CommandContext, id: str):
+    try:
+        int(id)
+    except ValueError:
+        await ctx.send("Die ID hat ein fehlerhaftes Format!", ephemeral=True)
+        return
+    except BaseException as e:
+        await ctx.send(
+            f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
+        return
+    if id not in data["votings"]:
+        await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
+        return
+    if not data["votings"][id]["user_id"] == str(ctx.author.id) and not user_is_privileged(ctx.author.roles):
+        await ctx.send("Du bist nicht berechtigt diese Abstimmung zu beenden!",
+                       ephemeral=True)
+        return
+    votings_channel: dc.Channel = await ctx.get_channel()
+    voting_message: dc.Message = await votings_channel.get_message(data["votings"][id]["message_id"])
+    message_embed: dc.Embed = evaluate_voting(voting_message)
+    current_time_formatted = strftime("%d.%m. %H:%M")
+    message_embed.description = "**Diese Abstimmung wurde vorzeitig beendet!**\n" \
+        + f"{ctx.user.username}, {current_time_formatted}" \
+        + "\n\n" + message_embed.description
+    await voting_message.edit(embeds=message_embed)
+    del data["votings"][id]
+    json_dump(data)
+    await ctx.send("Die Abstimmung wurde beendet.", ephemeral=True)
 
 bot.start()
