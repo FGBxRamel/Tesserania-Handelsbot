@@ -527,6 +527,9 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
     try:
         if float(deadline) < 0:
             deadline = abs(deadline)
+        elif float(deadline) == 0:
+            await ctx.send("Entschuldige, aber 0 ist keine gültige Zahl.", ephemeral=True)
+            return
     except ValueError:
         await ctx.send("Die Uhrzeit hat ein falsches Format.", ephemeral=True)
         return
