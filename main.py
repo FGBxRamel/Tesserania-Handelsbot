@@ -287,7 +287,7 @@ async def create_offer_respone(ctx: dc.CommandContext, title: str, price: str, o
         description=f"\n{offer_text}\n\n**Preis:** {price}",
         color=0xdaa520,
         author=dc.EmbedAuthor(
-            name=f"{ctx.author.nick}, {end_time} ({deadline} Tage)"),
+            name=f"{ctx.user.username}, {end_time} ({deadline} Tage)"),
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
@@ -553,7 +553,7 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         description=f"\n{text}",
         color=0xdaa520,
         author=dc.EmbedAuthor(
-            name=f"{ctx.author.nick}, {end_time} ({deadline} {time_type})"),
+            name=f"{ctx.user.username}, {end_time} ({deadline} {time_type})"),
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
