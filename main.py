@@ -68,9 +68,9 @@ def evaluate_voting(message: dc.Message) -> str:
     try:
         winner, winner_count = "", 0
         for reaction in message.reactions:
-            if int(reaction["count"]) > winner_count:
-                winner, winner_count = reaction["emoji"]["name"], int(
-                    reaction["count"])
+            if int(reaction.count) > winner_count:
+                winner, winner_count = reaction.emoji.name, int(
+                    reaction.count)
     except TypeError:
         pass
     message_embed: dc.Embed = message.embeds[0]
@@ -647,7 +647,7 @@ async def close_voting_response(ctx: dc.CommandContext, id: str):
     message_embed: dc.Embed = evaluate_voting(voting_message)
     current_time_formatted = strftime("%d.%m. %H:%M")
     message_embed.description = "**Diese Abstimmung wurde vorzeitig beendet!**\n" \
-        + f"{ctx.author.nick}, {current_time_formatted}" \
+        + f"{ctx.user.username}, {current_time_formatted}" \
         + "\n\n" + message_embed.description
     await voting_message.edit(embeds=message_embed)
     del data["votings"][id]
