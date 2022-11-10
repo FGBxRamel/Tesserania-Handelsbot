@@ -159,16 +159,10 @@ async def test(ctx: dc.CommandContext):
                     value="edit"
                 )
             ]
-        ),
-        dc.Option(
-            name="id",
-            description="Die ID des Angebots. Optional beim bearbeiten.",
-            type=dc.OptionType.INTEGER,
-            required=False
         )
     ]
 )
-async def offer(ctx: dc.CommandContext, aktion: str, id: int = None):
+async def offer(ctx: dc.CommandContext, aktion: str):
     if aktion == "create":
         if not str(ctx.author.id) in data["count"]:
             data["count"][str(ctx.author.id)] = 0
@@ -387,16 +381,10 @@ async def edit_offer_id(ctx: dc.CommandContext, title: str, text: str, id: str =
                     value="close"
                 )
             ]
-        ),
-        dc.Option(
-            name="id",
-            description="Die ID der Abstimmung. Optional beim bearbeiten.",
-            type=dc.OptionType.INTEGER,
-            required=False
-        ),
+        )
     ]
 )
-async def votings(ctx: dc.CommandContext, aktion: str, id: int = None):
+async def votings(ctx: dc.CommandContext, aktion: str):
     if aktion == "create":
         create_voting_modal = dc.Modal(
             title="Abstimmung erstellen",
@@ -590,7 +578,7 @@ async def delete_voting_response(ctx: dc.CommandContext, id: str):
         return
     votings_channel: dc.Channel = await ctx.get_channel()
     voting_message: dc.Message = await votings_channel.get_message(data["votings"][id]["message_id"])
-    await voting_message.delete(reason=f"[Manuell] {ctx.author.user.username}")
+    await voting_message.delete(reason=f"[Manuell] {ctx.user.username}")
     del data["votings"][id]
     json_dump(data)
     await ctx.send("Die Abstimmung wurde gelöscht.", ephemeral=True)
