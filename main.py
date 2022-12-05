@@ -1,7 +1,7 @@
 import configparser as cp
 import json
 from random import randint
-from time import localtime, mktime, strftime, strptime, time
+from time import localtime, mktime, strftime, strptime, time, sleep
 
 import interactions as dc
 from interactions.ext.get import get
@@ -161,10 +161,16 @@ async def test(ctx: dc.CommandContext):
                     value="edit"
                 )
             ]
+        ),
+        dc.Option(
+            name="id",
+            description="Die ID des Angebots.",
+            type=dc.OptionType.INTEGER,
+            required=False
         )
     ]
 )
-async def offer(ctx: dc.CommandContext, aktion: str):
+async def offer(ctx: dc.CommandContext, aktion: str, id: int = None):
     if aktion == "create":
         if not str(ctx.author.id) in data["count"]:
             data["count"][str(ctx.author.id)] = 0
@@ -214,7 +220,8 @@ async def offer(ctx: dc.CommandContext, aktion: str):
                     custom_id="delete_offer_id",
                     required=True,
                     min_length=4,
-                    max_length=4
+                    max_length=4,
+                    value=str(id) if id else ""
                 )
             ]
         )
@@ -228,13 +235,13 @@ async def offer(ctx: dc.CommandContext, aktion: str):
                     style=dc.TextStyleType.SHORT,
                     label="Titel",
                     custom_id="edit_offer_title",
-                    value=data["offers"][str(id)]["title"]
+                    value=data["offers"][str(id)]["title"] if id else ""
                 ),
                 dc.TextInput(
                     style=dc.TextStyleType.PARAGRAPH,
                     label="Angebotstext",
                     custom_id="edit_offer_text",
-                    value=data["offers"][str(id)]["text"]
+                    value=data["offers"][str(id)]["text"] if id else ""
                 ),
                 dc.TextInput(
                     style=dc.TextStyleType.SHORT,
@@ -276,11 +283,11 @@ async def create_offer_respone(ctx: dc.CommandContext, title: str, price: str, o
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
-    await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
     sent_message = await channel.send(embeds=app_embed)
     data["offers"][str(identifier)]["message_id"] = str(sent_message.id)
     data["count"][str(ctx.author.id)] = data["count"][str(ctx.author.id)] + 1
     json_dump(data)
+    await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
 
 
 @bot.modal("mod_delete_offer")
@@ -373,10 +380,16 @@ async def edit_offer_id(ctx: dc.CommandContext, title: str, text: str, id: str =
                     value="close"
                 )
             ]
+        ),
+        dc.Option(
+            name="id",
+            description="Die ID der Abstimmung.",
+            type=dc.OptionType.INTEGER,
+            required=False
         )
     ]
 )
-async def votings(ctx: dc.CommandContext, aktion: str):
+async def votings(ctx: dc.CommandContext, aktion: str, id: int = None):
     if aktion == "create":
         create_voting_modal = dc.Modal(
             title="Abstimmung erstellen",
@@ -417,56 +430,34 @@ async def votings(ctx: dc.CommandContext, aktion: str):
                     custom_id="delete_voting_id",
                     required=True,
                     min_length=4,
-                    max_length=4
+                    max_length=4,
+                    value=str(id) if id else ""
                 )
             ]
         )
         await ctx.popup(delete_modal)
     elif aktion == "edit":
-        if id is None:
-            edit_voting_modal = dc.Modal(
-                title="Abstimmung bearbeiten",
-                custom_id="mod_edit_voting",
-                components=[
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
-                        label="ID der Abstimmmung",
-                        custom_id="edit_voting_id",
-                        required=True,
-                        min_length=4,
-                        max_length=4
-                    ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.PARAGRAPH,
-                        label="Abstimmungstext",
-                        custom_id="edit_voting_text",
-                        required=True
-                    )
-                ]
-            )
-        else:
-            edit_voting_modal = dc.Modal(
-                title="Abstimmung bearbeiten",
-                custom_id="mod_edit_voting",
-                components=[
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
-                        label="ID der Abstimmmung",
-                        custom_id="edit_voting_id",
-                        required=True,
-                        min_length=4,
-                        max_length=4,
-                        value=str(id)
-                    ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.PARAGRAPH,
-                        label="Abstimmungstext",
-                        custom_id="edit_voting_text",
-                        required=True,
-                        value=data["votings"][str(id)]["text"]
-                    )
-                ]
-            )
+        edit_voting_modal = dc.Modal(
+            title="Abstimmung bearbeiten",
+            custom_id="mod_edit_voting",
+            components=[
+                dc.TextInput(
+                    style=dc.TextStyleType.SHORT,
+                    label="ID der Abstimmmung",
+                    custom_id="edit_voting_id",
+                    required=True,
+                    min_length=4,
+                    max_length=4,
+                    value=str(id) if id else ""
+                ),
+                dc.TextInput(
+                    style=dc.TextStyleType.PARAGRAPH,
+                    label="Abstimmungstext",
+                    custom_id="edit_voting_text",
+                    required=True
+                )
+            ]
+        )
         await ctx.popup(edit_voting_modal)
     elif aktion == "close":
         close_modal = dc.Modal(
@@ -479,7 +470,8 @@ async def votings(ctx: dc.CommandContext, aktion: str):
                     custom_id="close_voting_id",
                     required=True,
                     min_length=4,
-                    max_length=4
+                    max_length=4,
+                    value=str(id) if id else ""
                 )
             ]
         )
@@ -541,14 +533,15 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
-    await ctx.send("Die Abstimmung wurde entgegen genommen.", ephemeral=True)
     sent_message = await channel.send(content=voting_role_to_ping.mention, embeds=voting_embed)
     emote_index = 0
     while int(count) > emote_index:
         await sent_message.create_reaction(emote_chars[emote_index])
         emote_index += 1
+        sleep(0.5)
     data["votings"][str(identifier)]["message_id"] = str(sent_message.id)
     json_dump(data)
+    await ctx.send("Die Abstimmung wurde entgegen genommen.", ephemeral=True)
 
 
 @bot.modal("mod_delete_voting")
