@@ -283,11 +283,11 @@ async def create_offer_respone(ctx: dc.CommandContext, title: str, price: str, o
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
-    await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
     sent_message = await channel.send(embeds=app_embed)
     data["offers"][str(identifier)]["message_id"] = str(sent_message.id)
     data["count"][str(ctx.author.id)] = data["count"][str(ctx.author.id)] + 1
     json_dump(data)
+    await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
 
 
 @bot.modal("mod_delete_offer")
@@ -533,7 +533,6 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         footer=dc.EmbedFooter(text=identifier)
     )
     channel = await ctx.get_channel()
-    await ctx.send("Die Abstimmung wurde entgegen genommen.", ephemeral=True)
     sent_message = await channel.send(content=voting_role_to_ping.mention, embeds=voting_embed)
     emote_index = 0
     while int(count) > emote_index:
@@ -542,6 +541,7 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
         sleep(0.5)
     data["votings"][str(identifier)]["message_id"] = str(sent_message.id)
     json_dump(data)
+    await ctx.send("Die Abstimmung wurde entgegen genommen.", ephemeral=True)
 
 
 @bot.modal("mod_delete_voting")
