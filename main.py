@@ -1,7 +1,7 @@
 import configparser as cp
 import json
 from random import randint
-from time import localtime, mktime, strftime, strptime, time
+from time import localtime, mktime, strftime, strptime, time, sleep
 
 import interactions as dc
 from interactions.ext.get import get
@@ -547,6 +547,7 @@ async def create_voting_response(ctx: dc.CommandContext, text: str, count: str, 
     while int(count) > emote_index:
         await sent_message.create_reaction(emote_chars[emote_index])
         emote_index += 1
+        sleep(0.5)
     data["votings"][str(identifier)]["message_id"] = str(sent_message.id)
     json_dump(data)
 
