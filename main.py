@@ -2,6 +2,7 @@ import configparser as cp
 import json
 from random import randint
 from time import localtime, mktime, strftime, strptime, time, sleep
+from random import shuffle
 
 import interactions as dc
 from interactions.ext.get import get
@@ -14,9 +15,10 @@ with open('config.ini', 'r') as config_file:
     server_ids = config.get('IDs', 'server').split(',')
     privileged_roles_ids = [int(id) for id in config.get(
         'IDs', 'privileged_roles').split(',')]
+    voting_role_to_ping_id = int(config.get('IDs', 'voting_role_to_ping'))
+    minecrafter_role_id = int(config.get('IDs', 'minecrafter_role'))
     offer_channel_id = int(config.get('IDs', 'offer_channel'))
     voting_channel_id = int(config.get('IDs', 'voting_channel'))
-    voting_role_to_ping_id = int(config.get('IDs', 'voting_role_to_ping'))
 
 
 bot = dc.Client(
@@ -28,6 +30,7 @@ emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1
                "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
 
 open("data.json", "a").close()
+open("wichteln.txt", "a").close()
 
 
 def implement(json_object: dict) -> dict:
@@ -54,12 +57,12 @@ try:
         data = implement(json.load(data_file))
 except json.JSONDecodeError:
     data = {}
-if "offers" not in data:
-    data["offers"] = {}
-if "count" not in data:
-    data["count"] = {}
-if "votings" not in data:
-    data["votings"] = {}
+sections = ["offers", "count", "votings", "wichteln"]
+for section in sections:
+    if section not in data:
+        data[section] = {}
+if "active" not in data["wichteln"]:
+    data["wichteln"]["active"] = False
 json_dump(data)
 
 
@@ -631,5 +634,59 @@ async def close_voting_response(ctx: dc.CommandContext, id: str):
     del data["votings"][id]
     json_dump(data)
     await ctx.send("Die Abstimmung wurde beendet.", ephemeral=True)
+
+
+@bot.command(
+    name="wichteln",
+    description="Der Befehl für das Wichteln.",
+    scope=scope_ids,
+    options=[
+        dc.Option(
+            name="aktion",
+            description="Das, was du tuen willst.",
+            type=dc.OptionType.STRING,
+            required=True,
+            choices=[
+                dc.Choice(
+                    name="erstellen",
+                    value="create"
+                ),
+                dc.Choice(
+                    name="löschen",
+                    value="delete"
+                ),
+            ]
+        ),
+        dc.Option(
+            name="kanal",
+            description="Der Kanal, in dem die Wichtelung stattfinden soll.",
+            type=dc.OptionType.CHANNEL,
+            required=False
+        ),
+    ]
+)
+async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None):
+    if aktion == "create":
+        if not kanal:
+            await ctx.send("Du musst einen Kanal angeben!", ephemeral=True)
+            return
+        if data["wichteln"]["active"]:
+            await ctx.send("Es gibt bereits eine Wichtelung.", ephemeral=True)
+            return
+        text = ""
+        with open("wichteln.txt", "r") as f:
+            text = f.read()
+        text.replace("$year$", strftime("%Y"))
+        guild: dc.Guild = await ctx.get_guild()
+        participants = []
+        for user in guild.members:
+            if minecrafter_role_id in user.roles:
+                participants.append(user.mention)
+        shuffle(participants)
+        # Choose partners and then send DMs
+        text.replace("$list$")
+        data["wichteln"] = True
+        json_dump(data)
+        await ctx.send("Die Wichtelung wurde erstellt.", ephemeral=True)
 
 bot.start()
