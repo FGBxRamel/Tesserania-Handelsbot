@@ -652,9 +652,13 @@ async def close_voting_response(ctx: dc.CommandContext, id: str):
                     value="create"
                 ),
                 dc.Choice(
-                    name="löschen",
-                    value="delete"
+                    name="beenden",
+                    value="end"
                 ),
+                dc.Choice(
+                    name="bearbeiten",
+                    value="edit"
+                )
             ]
         ),
         dc.Option(
@@ -673,20 +677,35 @@ async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None
         if data["wichteln"]["active"]:
             await ctx.send("Es gibt bereits eine Wichtelung.", ephemeral=True)
             return
+        data["wichteln"]["participants"] = []
         text = ""
         with open("wichteln.txt", "r") as f:
             text = f.read()
         text.replace("$year$", strftime("%Y"))
+        wichteln_embed = dc.Embed(
+            title="Wichteln",
+            description=text
+        )
         guild: dc.Guild = await ctx.get_guild()
+        minecrafter_role: dc.Role = await guild.get_role(minecrafter_role_id)
+        await kanal.send(content=minecrafter_role.mention, embeds=wichteln_embed)
         participants = []
-        for user in guild.members:
-            if minecrafter_role_id in user.roles:
-                participants.append(user.mention)
+        for member in guild.members:
+            if minecrafter_role_id in member.roles:
+                participants.append(member)
         shuffle(participants)
-        # Choose partners and then send DMs
-        text.replace("$list$")
-        data["wichteln"] = True
+        participants.append(participants[0])
+        i = 0
+        for participant in participants:
+            if i == len(participants) - 1:
+                break
+            data["wichteln"]["participants"].append(participant.id)
+            partner = participants[i + 1].nick
+            await participant.send(f"Du bist Wichtel von {partner}!\nFür mehr Infos schaue bitte auf {guild.name}.")
+            i += 1
+        data["wichteln"]["active"] = True
         json_dump(data)
         await ctx.send("Die Wichtelung wurde erstellt.", ephemeral=True)
+        # TODO Add the end and edit command
 
 bot.start()
