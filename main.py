@@ -1,8 +1,7 @@
 import configparser as cp
 import json
-from random import randint
-from time import localtime, mktime, strftime, strptime, time, sleep
-from random import shuffle
+from random import randint, shuffle
+from time import localtime, mktime, sleep, strftime, strptime, time
 
 import interactions as dc
 from interactions.ext.get import get
@@ -743,7 +742,7 @@ async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None
 
 
 @bot.modal("wichteln_text")
-async def wichteln_text_modal(ctx: dc.CommandContext, text: str):
+async def wichteln_text_response(ctx: dc.CommandContext, text: str):
     with open("wichteln.txt", "w") as f:
         f.write(text)
     text = text.replace("$year$", strftime("%Y"))
