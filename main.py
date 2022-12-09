@@ -648,8 +648,8 @@ async def close_voting_response(ctx: dc.CommandContext, id: str):
             required=True,
             choices=[
                 dc.Choice(
-                    name="erstellen",
-                    value="create"
+                    name="starten",
+                    value="start"
                 ),
                 dc.Choice(
                     name="beenden",
@@ -670,13 +670,14 @@ async def close_voting_response(ctx: dc.CommandContext, id: str):
     ]
 )
 async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None):
-    if aktion == "create":
+    if aktion == "start":
         if not kanal:
             await ctx.send("Du musst einen Kanal angeben!", ephemeral=True)
             return
         if data["wichteln"]["active"]:
             await ctx.send("Es gibt bereits eine Wichtelung.", ephemeral=True)
             return
+        await ctx.defer(ephemeral=True)
         data["wichteln"]["participants"] = []
         text = ""
         with open("wichteln.txt", "r") as f:
@@ -689,8 +690,9 @@ async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None
         guild: dc.Guild = await ctx.get_guild()
         minecrafter_role: dc.Role = await guild.get_role(minecrafter_role_id)
         await kanal.send(content=minecrafter_role.mention, embeds=wichteln_embed)
-        participants = []
-        for member in guild.members:
+        participants: list[dc.Member] = []
+        guild_members = await guild.get_all_members()
+        for member in guild_members:
             if minecrafter_role_id in member.roles:
                 participants.append(member)
         shuffle(participants)
@@ -699,13 +701,50 @@ async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None
         for participant in participants:
             if i == len(participants) - 1:
                 break
-            data["wichteln"]["participants"].append(participant.id)
-            partner = participants[i + 1].nick
+            data["wichteln"]["participants"].append(int(participant.id))
+            partner = participants[i + 1].user.username
             await participant.send(f"Du bist Wichtel von {partner}!\nFür mehr Infos schaue bitte auf {guild.name}.")
             i += 1
         data["wichteln"]["active"] = True
         json_dump(data)
         await ctx.send("Die Wichtelung wurde erstellt.", ephemeral=True)
-        # TODO Add the end and edit command
+    elif aktion == "end":
+        if not data["wichteln"]["active"]:
+            await ctx.send("Es gibt keine aktive Wichtelung.", ephemeral=True)
+            return
+        guild: dc.Guild = await ctx.get_guild()
+        guild_id = int(guild.id)
+        participants = await dc.get(bot, list[dc.Member], parent_id=guild_id, object_ids=data["wichteln"]["participants"])
+        for participant in participants:
+            await participant.send(f"Die Wichtelung von {guild.name} wurde beendet.")
+        data["wichteln"]["active"] = False
+        json_dump(data)
+        await ctx.send("Die Wichtelung wurde beendet.", ephemeral=True)
+    elif aktion == "edit":
+        with open("wichteln.txt", "r") as f:
+            text = f.read()
+        wichteln_text_modal = dc.Modal(
+            title="Wichteltext bearbeiten",
+            description="Hier kannst du den Text für die Wichtelung bearbeiten.",
+            custom_id="wichteln_text",
+            components=[
+                dc.TextInput(
+                    label="Text",
+                    placeholder="Text",
+                    value=text,
+                    custom_id="text",
+                    style=dc.TextStyleType.PARAGRAPH,
+                    required=True
+                )
+            ]
+        )
+        ctx.popup(wichteln_text_modal)
+
+
+@bot.modal("wichteln_text")
+async def wichteln_text_modal(ctx: dc.CommandContext, text: str):
+    with open("wichteln.txt", "w") as f:
+        f.write(text)
+    await ctx.send("Der Text wurde gespeichert.", ephemeral=True)
 
 bot.start()
