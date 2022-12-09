@@ -712,6 +712,7 @@ async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None
         if not data["wichteln"]["active"]:
             await ctx.send("Es gibt keine aktive Wichtelung.", ephemeral=True)
             return
+        await ctx.defer(ephemeral=True)
         guild: dc.Guild = await ctx.get_guild()
         guild_id = int(guild.id)
         participants = await dc.get(bot, list[dc.Member], parent_id=guild_id, object_ids=data["wichteln"]["participants"])
@@ -738,13 +739,17 @@ async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None
                 )
             ]
         )
-        ctx.popup(wichteln_text_modal)
+        await ctx.popup(wichteln_text_modal)
 
 
 @bot.modal("wichteln_text")
 async def wichteln_text_modal(ctx: dc.CommandContext, text: str):
     with open("wichteln.txt", "w") as f:
         f.write(text)
-    await ctx.send("Der Text wurde gespeichert.", ephemeral=True)
+    wichteln_text_preview_embed = dc.Embed(
+        title="Textvorschau",
+        description=text
+    )
+    await ctx.send("Der Text wurde gespeichert.", ephemeral=True, embeds=wichteln_text_preview_embed)
 
 bot.start()
