@@ -746,6 +746,7 @@ async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None
 async def wichteln_text_modal(ctx: dc.CommandContext, text: str):
     with open("wichteln.txt", "w") as f:
         f.write(text)
+    text = text.replace("$year$", strftime("%Y"))
     wichteln_text_preview_embed = dc.Embed(
         title="Textvorschau",
         description=text
