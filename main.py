@@ -61,9 +61,9 @@ sections = ["offers", "count", "votings", "wichteln", "shop"]
 for section in sections:
     if section not in data:
         data[section] = {}
-
+# TODO Don't put max_shop_count in data file -> config
 subsections = {"wichteln": {"active": False,
-                            "participants": []}, "shop": {"count": {}, "max_shop_count": 3, "shops": {}}}
+                            "participants": []}, "shop": {"count": {}, "max_shop_count": 3, "shops": {}, "categories": []}}
 for section, subsections in subsections.items():
     for subsection, value in subsections.items():
         if subsection not in data[section]:
@@ -811,42 +811,45 @@ async def button_test(ctx: dc.CommandContext):
     await ctx.send("Test", components=[row, row2])
 
 
-@ bot.component("test")
+@bot.component("test")
 async def test_button(ctx: dc.ComponentContext):
     await ctx.send("Test", ephemeral=True)
 
 
-@ bot.component("test2")
+@bot.component("test2")
 async def test2_button(ctx: dc.ComponentContext):
     await ctx.send("Test2", ephemeral=True)
 
 
-@ bot.component("test3")
+@bot.component("test3")
 async def test3_button(ctx: dc.ComponentContext):
     await ctx.send("Test3", ephemeral=True)
 
 
-@ bot.component("test4")
+@bot.component("test4")
 async def test4_button(ctx: dc.ComponentContext):
     await ctx.send("Test4", ephemeral=True)
 
 
-@ bot.component("test_select")
+@bot.component("test_select")
 async def test_select(ctx: dc.CommandContext, value):
     await ctx.edit("Du hast " + value[0] + " ausgewählt.", components=[])
 
 categories = []
+# TODO Don't put the categories in the data file -> config file
 for category in data["shop"]["categories"]:
-    categories.append(dc.SelectOption(
+    option = dc.SelectOption(
         label=category,
         value=category
-    ))
+    )
+    categories.append(option)
+print(categories)
 categorie_select = dc.SelectMenu(
     custom_id="categorie_select",
     placeholder="Kategorie",
-    options=categories,
-    disabled=False
+    options=categories
 )
+print(categorie_select)
 shop_abort_button = dc.Button(
     label="Abbrechen",
     custom_id="shop_abort",
@@ -937,7 +940,7 @@ async def shop_abort(ctx: dc.ComponentContext):
 
 @bot.component("categorie_select")
 @dc.autodefer()
-async def categorie_select(ctx: dc.ComponentContext, value):
+async def categorie_select(ctx: dc.CommandContext, value):
     shop_message_text: str = ctx.message.content
     csv_string = re.match(r"\|\| (.*) \|\|", shop_message_text).group(0)
     shop_details = csv_string.split(",")
@@ -966,16 +969,23 @@ async def categorie_select(ctx: dc.ComponentContext, value):
         color=0xdaa520,
         footer=dc.EmbedFooter(text=identifier)
     )
-    json_dump(data)
+    print(data)
+    # json_dump(data)
     await ctx.channel.send(embeds=shop_embed)
     await ctx.edit("Der Shop wurde erstellt.", components=[], ephemeral=True)
 
 
 @bot.modal("shop_create")
-async def mod_shop_create(ctx: dc.ModalContext, name: str, offer: str, location: str, dm_description: str):
+async def mod_shop_create(ctx: dc.CommandContext, name: str, offer: str, location: str, dm_description: str):
+    # row1 = dc.ActionRow(
+    #     components=[categorie_select]
+    # )
+    # row2 = dc.ActionRow(
+    #     components=[shop_abort_button, shop_abort_button]
+    # )
     row = dc.spread_to_rows([categorie_select, shop_abort_button])
     await ctx.send(f"""|| {name},{offer},{location},{dm_description} ||\n
-    Bitte wähle eine Kategorie:""", components=row, ephemeral=True)
+    Bitte wähle eine Kategorie:""", components=[categorie_select])
 
 
 bot.start()
