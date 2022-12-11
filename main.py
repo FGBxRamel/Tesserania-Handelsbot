@@ -1,5 +1,6 @@
 import configparser as cp
 import json
+import re
 from random import randint, shuffle
 from time import localtime, mktime, sleep, strftime, strptime, time
 
@@ -56,12 +57,18 @@ try:
         data = implement(json.load(data_file))
 except json.JSONDecodeError:
     data = {}
-sections = ["offers", "count", "votings", "wichteln"]
+sections = ["offers", "count", "votings", "wichteln", "shop"]
 for section in sections:
     if section not in data:
         data[section] = {}
-if "active" not in data["wichteln"]:
-    data["wichteln"]["active"] = False
+
+subsections = {"wichteln": {"active": False,
+                            "participants": []}, "shop": {"count": {}, "max_shop_count": 3, "shops": {}}}
+for section, subsections in subsections.items():
+    for subsection, value in subsections.items():
+        if subsection not in data[section]:
+            data[section][subsection] = value
+
 json_dump(data)
 
 
@@ -751,5 +758,224 @@ async def wichteln_text_response(ctx: dc.CommandContext, text: str):
         description=text
     )
     await ctx.send("Der Text wurde gespeichert.", ephemeral=True, embeds=wichteln_text_preview_embed)
+
+
+@bot.command(
+    name="button_test",
+    description="Ein Test für Buttons.",
+    scope=scope_ids
+)
+async def button_test(ctx: dc.CommandContext):
+    button = dc.Button(
+        label="Test",
+        custom_id="test",
+        style=dc.ButtonStyle.PRIMARY
+    )
+    button2 = dc.Button(
+        label="Test2",
+        custom_id="test2",
+        style=dc.ButtonStyle.PRIMARY
+    )
+    button3 = dc.Button(
+        label="Test3",
+        custom_id="test3",
+        style=dc.ButtonStyle.PRIMARY
+    )
+    button4 = dc.Button(
+        label="Test4",
+        custom_id="test4",
+        style=dc.ButtonStyle.PRIMARY
+    )
+    selection = dc.SelectMenu(
+        custom_id="test_select",
+        placeholder="Ein Platzhalter",
+        options=[
+            dc.SelectOption(
+                label="Testoption",
+                value="Testoption 1",
+                description="Eine Testoption"
+            ),
+            dc.SelectOption(
+                label="testoption2",
+                value="Testoption 2",
+                description="Eine weitere Testoption"
+            )
+        ]
+    )
+    row = dc.ActionRow(
+        components=[selection]
+    )
+    row2 = dc.ActionRow(
+        components=[button]
+    )
+    await ctx.send("Test", components=[row, row2])
+
+
+@ bot.component("test")
+async def test_button(ctx: dc.ComponentContext):
+    await ctx.send("Test", ephemeral=True)
+
+
+@ bot.component("test2")
+async def test2_button(ctx: dc.ComponentContext):
+    await ctx.send("Test2", ephemeral=True)
+
+
+@ bot.component("test3")
+async def test3_button(ctx: dc.ComponentContext):
+    await ctx.send("Test3", ephemeral=True)
+
+
+@ bot.component("test4")
+async def test4_button(ctx: dc.ComponentContext):
+    await ctx.send("Test4", ephemeral=True)
+
+
+@ bot.component("test_select")
+async def test_select(ctx: dc.CommandContext, value):
+    await ctx.edit("Du hast " + value[0] + " ausgewählt.", components=[])
+
+categories = []
+for category in data["shop"]["categories"]:
+    categories.append(dc.SelectOption(
+        label=category,
+        value=category
+    ))
+categorie_select = dc.SelectMenu(
+    custom_id="categorie_select",
+    placeholder="Kategorie",
+    options=categories,
+    disabled=False
+)
+shop_abort_button = dc.Button(
+    label="Abbrechen",
+    custom_id="shop_abort",
+    style=dc.ButtonStyle.DANGER
+)
+
+
+@bot.command(
+    name="shop",
+    description="Der Command für das Handelsregister.",
+    scope=scope_ids,
+    options=[
+        dc.Option(
+            name="aktion",
+            description="Die Aktion, die du ausführen möchtest.",
+            type=dc.OptionType.STRING,
+            required=True,
+            choices=[
+                dc.Choice(
+                    name="eintragen",
+                    value="create"
+                ),
+                dc.Choice(
+                    name="bearbeiten",
+                    value="edit"
+                ),
+                dc.Choice(
+                    name="löschen",
+                    value="delete"
+                )
+            ]
+        )
+    ]
+)
+async def shop(ctx: dc.CommandContext, aktion: str):
+    if aktion == "create":
+        if not str(ctx.author.id) in data["shop"]["count"]:
+            data["shop"]["count"][str(ctx.author.id)] = 0
+        elif data["shop"]["count"][str(ctx.author.id)] >= data["shop"]["max_shop_count"]:
+            await ctx.send("Du hast bereits die maximale Anzahl an Shops erreicht.", ephemeral=True)
+            return
+        shop_create_modal = dc.Modal(
+            title="Shop erstellen",
+            description="Hier kannst du einen Shop erstellen.",
+            custom_id="shop_create",
+            components=[
+                dc.TextInput(
+                    label="Name",
+                    placeholder="Name",
+                    custom_id="name",
+                    style=dc.TextStyleType.SHORT,
+                    required=True,
+                    max_length=50
+                ),
+                dc.TextInput(
+                    label="Angebot",
+                    placeholder="Was bietest du an?",
+                    custom_id="offer",
+                    style=dc.TextStyleType.PARAGRAPH,
+                    required=True,
+                    max_length=250
+                ),
+                dc.TextInput(
+                    label="Ort",
+                    placeholder="Wo befindet sich dein Shop?",
+                    custom_id="location",
+                    style=dc.TextStyleType.PARAGRAPH,
+                    required=True,
+                    max_length=100
+                ),
+                dc.TextInput(
+                    label="DM-Beschreibung",
+                    placeholder="Was soll in der DM stehen?",
+                    custom_id="dm_description",
+                    style=dc.TextStyleType.PARAGRAPH,
+                    required=True,
+                    max_length=150
+                )
+            ]
+        )
+        await ctx.popup(shop_create_modal)
+
+
+@bot.component("shop_abort")
+async def shop_abort(ctx: dc.ComponentContext):
+    await ctx.edit("Abgebrochen.", components=[], ephemeral=True)
+
+
+@bot.component("categorie_select")
+@dc.autodefer()
+async def categorie_select(ctx: dc.ComponentContext, value):
+    shop_message_text: str = ctx.message.content
+    csv_string = re.match(r"\|\| (.*) \|\|", shop_message_text).group(0)
+    shop_details = csv_string.split(",")
+    identifier = randint(1000, 9999)
+    while identifier in data["votings"]:
+        identifier = randint(1000, 9999)
+    data["shop"]["shops"][identifier] = {
+        "name": shop_details[0],
+        "offer": shop_details[1],
+        "location": shop_details[2],
+        "dm_description": shop_details[3],
+        # TODO: Don't save the categorie as it's name, in case of change -> Admin Tools
+        "categorie": value,
+        "owner": str(ctx.author.id),
+        "approved": False
+    }
+    shop_embed = dc.Embed(
+        title=shop_details[0],
+        description=f"""|| *{value}* ||\n\n
+        **Angebot:**\n
+        {shop_details[1]}\n\n
+        **Wo:**\n
+        {shop_details[2]}\n\n
+        **Beseitzer:** {ctx.author.nick}\n\n
+        Shop nicht genehmigt""" + r"\U000274C",
+        color=0xdaa520,
+        footer=dc.EmbedFooter(text=identifier)
+    )
+    json_dump(data)
+    await ctx.channel.send(embeds=shop_embed)
+    await ctx.edit("Der Shop wurde erstellt.", components=[], ephemeral=True)
+
+
+@bot.modal("shop_create")
+async def mod_shop_create(ctx: dc.ModalContext, name: str, offer: str, location: str, dm_description: str):
+    row = dc.spread_to_rows([categorie_select, shop_abort_button])
+    await ctx.send(f"""|| {name},{offer},{location},{dm_description} ||\n
+    Bitte wähle eine Kategorie:""", components=row, ephemeral=True)
+
 
 bot.start()
