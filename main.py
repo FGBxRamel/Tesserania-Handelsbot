@@ -21,6 +21,10 @@ with open('config.ini', 'r') as config_file:
     offer_channel_id = int(config.get('IDs', 'offer_channel'))
     voting_channel_id = int(config.get('IDs', 'voting_channel'))
 
+    shop_count_limit = int(config.get('Shops', 'max_shops_per_person'))
+    shop_categories = config.get('Shops', 'categories').split(',')
+    shop_categories_excluded_from_limit = config.get(
+        'Shops', 'categories_excluded_from_limit').split(",")
 
 bot = dc.Client(
     token=TOKEN)
@@ -62,9 +66,8 @@ sections = ["offers", "count", "votings", "wichteln", "shop"]
 for section in sections:
     if section not in data:
         data[section] = {}
-# TODO Don't put max_shop_count in data file -> config
 subsections = {"wichteln": {"active": False,
-                            "participants": []}, "shop": {"count": {}, "max_shop_count": 3, "shops": {}, "categories": []}}
+                            "participants": []}, "shop": {"count": {}, "shops": {}}}
 for section, subsections in subsections.items():
     for subsection, value in subsections.items():
         if subsection not in data[section]:
@@ -764,8 +767,7 @@ async def wichteln_text_response(ctx: dc.CommandContext, text: str):
 
 
 categories = []
-# TODO Don't put the categories in the data file -> config file
-for category in data["shop"]["categories"]:
+for category in shop_categories:
     option = dc.SelectOption(
         label=category,
         value=category
@@ -813,51 +815,15 @@ shop_abort_button = dc.Button(
 )
 async def shop(ctx: dc.CommandContext, aktion: str):
     if aktion == "create":
-        if not str(ctx.author.id) in data["shop"]["count"]:
-            data["shop"]["count"][str(ctx.author.id)] = 0
-        elif data["shop"]["count"][str(ctx.author.id)] >= data["shop"]["max_shop_count"]:
-            await ctx.send("Du hast bereits die maximale Anzahl an Shops erreicht.", ephemeral=True)
-            return
-        shop_create_modal = dc.Modal(
-            title="Shop erstellen",
-            description="Hier kannst du einen Shop erstellen.",
-            custom_id="shop_create",
-            components=[
-                dc.TextInput(
-                    label="Name",
-                    placeholder="Name",
-                    custom_id="name",
-                    style=dc.TextStyleType.SHORT,
-                    required=True,
-                    max_length=50
-                ),
-                dc.TextInput(
-                    label="Angebot",
-                    placeholder="Was bietest du an?",
-                    custom_id="offer",
-                    style=dc.TextStyleType.PARAGRAPH,
-                    required=True,
-                    max_length=250
-                ),
-                dc.TextInput(
-                    label="Ort",
-                    placeholder="Wo befindet sich dein Shop?",
-                    custom_id="location",
-                    style=dc.TextStyleType.PARAGRAPH,
-                    required=True,
-                    max_length=100
-                ),
-                dc.TextInput(
-                    label="DM-Beschreibung",
-                    placeholder="Was soll in der DM stehen?",
-                    custom_id="dm_description",
-                    style=dc.TextStyleType.PARAGRAPH,
-                    required=True,
-                    max_length=150
-                )
-            ]
-        )
-        await ctx.popup(shop_create_modal)
+        identifier = randint(1000, 9999)
+        while identifier in data["shop"]["shops"] or identifier in shop_transfer_data:
+            identifier = randint(1000, 9999)
+        shop_transfer_data[identifier] = {}
+        row1 = dc.ActionRow(components=[categorie_selectmenu])
+        row2 = dc.ActionRow(components=[shop_abort_button])
+        sent_message = await ctx.send(f"""|| {identifier} ||
+        Bitte wähle eine Kategorie:""", components=[row1, row2], ephemeral=True)
+        shop_transfer_data[identifier]["message_id"] = sent_message.id
 
 
 @bot.component("shop_abort")
@@ -865,33 +831,99 @@ async def shop_abort(ctx: dc.ComponentContext):
     shop_message_text = ctx.message.content
     identifier = int(
         re.match(r"\|\| (\d{4}) \|\|", shop_message_text).group(1))
-    del shop_transfer_data[identifier]
+    try:
+        del shop_transfer_data[identifier]
+    except KeyError:
+        await ctx.edit("Es gibt keine aktive Shop-Erstellung. Bitte benutze keine Nachricht zweimal!", components=[])
+        return
     await ctx.edit("Abgebrochen.", components=[])
 
 
 @bot.component("categorie_select")
 @dc.autodefer()
 async def categorie_select(ctx: dc.ComponentContext, value: list):
-    shop_message_text = ctx.message.content
+    shop_message = ctx.message.content
     identifier = int(
-        re.match(r"\|\| (\d{4}) \|\|", shop_message_text).group(1))
+        re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1))
+    if not str(ctx.author.id) in data["shop"]["count"]:
+        data["shop"]["count"][str(ctx.author.id)] = 0
+    elif not value[0] in shop_categories_excluded_from_limit:
+        if data["shop"]["count"][str(ctx.author.id)] >= shop_count_limit:
+            try:
+                del shop_transfer_data[identifier]
+            except KeyError:
+                await ctx.edit("Ein Fehler ist aufgetreten. Bitte benutze eine Nachricht nicht zweimal!", components=[])
+                return
+            await ctx.edit("Du hast bereits die maximale Anzahl an Shops erreicht.", components=[])
+            return
+    try:
+        shop_transfer_data[identifier]["categorie"] = value[0]
+    except KeyError:
+        await ctx.edit("Ein Fehler ist aufgetreten. Bitte benutze eine Nachricht nicht zweimal!", components=[])
+        return
+    shop_create_modal = dc.Modal(
+        title="Shop erstellen",
+        description="Hier kannst du einen Shop erstellen.",
+        custom_id="shop_create",
+        components=[
+            dc.TextInput(
+                    label="Name",
+                    placeholder="Name",
+                    custom_id="name",
+                    style=dc.TextStyleType.SHORT,
+                    required=True,
+                    max_length=50
+            ),
+            dc.TextInput(
+                label="Angebot",
+                placeholder="Was bietest du an?",
+                custom_id="offer",
+                style=dc.TextStyleType.PARAGRAPH,
+                required=True,
+                max_length=250
+            ),
+            dc.TextInput(
+                label="Ort",
+                placeholder="Wo befindet sich dein Shop?",
+                custom_id="location",
+                style=dc.TextStyleType.PARAGRAPH,
+                required=True,
+                max_length=100
+            ),
+            dc.TextInput(
+                label="DM-Beschreibung",
+                placeholder="Was soll in der DM stehen?",
+                custom_id="dm_description",
+                style=dc.TextStyleType.PARAGRAPH,
+                required=True,
+                max_length=150
+            )
+        ]
+    )
+    await ctx.popup(shop_create_modal)
+
+
+@bot.modal("shop_create")
+async def mod_shop_create(ctx: dc.CommandContext, name: str, offer: str, location: str, dm_description: str):
+    shop_message = ctx.message.content
+    identifier = int(
+        re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1))
     data["shop"]["shops"][identifier] = {
-        "name": shop_transfer_data[identifier]["name"],
-        "offer": shop_transfer_data[identifier]["offer"],
-        "location": shop_transfer_data[identifier]["location"],
-        "dm_description": shop_transfer_data[identifier]["dm_description"],
-        # TODO Don't save the categorie as it's name, in case of change -> Admin Tools
-        "categorie": value[0],
+        "name": name,
+        "offer": offer,
+        "location": location,
+        "dm_description": dm_description,
+        "categorie": shop_transfer_data[identifier]["categorie"],
         "owner": str(ctx.author.id),
         "approved": False
     }
     shop_embed = dc.Embed(
-        title=shop_transfer_data[identifier]["name"],
-        description=f"""|| *{value[0]}* ||\n
+        title=name,
+        description=f"""|| {shop_transfer_data[identifier]["categorie"]} ||\n
         **Angebot:**
-        {shop_transfer_data[identifier]["offer"]}\n
+        {offer}\n
         **Wo:**
-        {shop_transfer_data[identifier]["location"]}\n
+        {location}\n
         **Besitzer:** {ctx.author.user.username}\n\
         Shop nicht genehmigt :x: """,
         color=0xdaa520,
@@ -899,28 +931,10 @@ async def categorie_select(ctx: dc.ComponentContext, value: list):
     )
     sent_message = await ctx.channel.send(embeds=shop_embed)
     data["shop"]["shops"][identifier]["message_id"] = str(sent_message.id)
-    data["shop"]["count"][str(ctx.author.id)] += 1
+    if not shop_transfer_data[identifier]["categorie"] in shop_categories_excluded_from_limit:
+        data["shop"]["count"][str(ctx.author.id)] += 1
     json_dump(data)
-    categorie_selectmenu_locked = deepcopy(categorie_selectmenu)
-    categorie_selectmenu_locked.disabled = True
-    categorie_selectmenu_locked.placeholder = value[0]
-    await ctx.edit("Der Shop wurde erstellt.", components=[categorie_selectmenu_locked])
-
-
-@bot.modal("shop_create")
-async def mod_shop_create(ctx: dc.CommandContext, name: str, offer: str, location: str, dm_description: str):
-    identifier = randint(1000, 9999)
-    while identifier in data["shop"]["shops"] or identifier in shop_transfer_data:
-        identifier = randint(1000, 9999)
-    shop_transfer_data[identifier] = {
-        "name": name,
-        "offer": offer,
-        "location": location,
-        "dm_description": dm_description
-    }
-    row1 = dc.ActionRow(components=[categorie_selectmenu])
-    row2 = dc.ActionRow(components=[shop_abort_button])
-    await ctx.send(f"""|| {identifier} ||
-    Bitte wähle eine Kategorie:""", components=[row1, row2], ephemeral=True)
+    del shop_transfer_data[identifier]
+    await ctx.send("Shop erstellt.", ephemeral=True)
 
 bot.start()
