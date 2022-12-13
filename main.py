@@ -786,6 +786,18 @@ shop_abort_button = dc.Button(
 )
 
 
+def get_shop_ids_select_options() -> list[dc.SelectOption]:
+    options = []
+    for shop_id, shop_data in data["shop"]["shops"].items():
+        option = dc.SelectOption(
+            label=shop_id,
+            value=str(shop_id),
+            description=shop_data["name"]
+        )
+        options.append(option)
+    return options
+
+
 @bot.command(
     name="shop",
     description="Der Command für das Handelsregister.",
@@ -810,20 +822,75 @@ shop_abort_button = dc.Button(
                     value="delete"
                 )
             ]
+        ),
+        dc.Option(
+            name="id",
+            description="Die ID des Shops, den du bearbeiten oder löschen möchtest.",
+            type=dc.OptionType.INTEGER,
+            required=False,
+            min_value=1000,
+            max_value=9999
         )
     ]
 )
-async def shop(ctx: dc.CommandContext, aktion: str):
+async def shop(ctx: dc.CommandContext, aktion: str, id: str = None):
+    if id:
+        try:
+            int(id)
+            id = str(id)
+        except ValueError:
+            await ctx.send("Die ID hat ein fehlerhaftes Format!", ephemeral=True)
+            return
     if aktion == "create":
-        identifier = randint(1000, 9999)
+        identifier = str(randint(1000, 9999))
         while identifier in data["shop"]["shops"] or identifier in shop_transfer_data:
-            identifier = randint(1000, 9999)
+            identifier = str(randint(1000, 9999))
         shop_transfer_data[identifier] = {}
         row1 = dc.ActionRow(components=[categorie_selectmenu])
         row2 = dc.ActionRow(components=[shop_abort_button])
         sent_message = await ctx.send(f"""|| {identifier} ||
         Bitte wähle eine Kategorie:""", components=[row1, row2], ephemeral=True)
         shop_transfer_data[identifier]["message_id"] = sent_message.id
+    elif aktion == "edit":
+        await ctx.send("Dieser Command ist noch nicht verfügbar.", ephemeral=True)
+    elif aktion == "delete":
+        if id:
+            if id in data["shop"]["shops"]:
+                if not ctx.author.id == data["shop"]["shops"][id]["owner"] or not user_is_privileged(ctx.author.roles):
+                    await ctx.send("Du bist nicht der Besitzer dieses Shops!", ephemeral=True)
+                    return
+                shop_message = await ctx.channel.get_message(data["shop"]["shops"][id]["message_id"])
+                await shop_message.delete()
+                if not data["shop"]["shops"][id]["categorie"] in shop_categories_excluded_from_limit:
+                    data["shop"]["count"][str(ctx.author.id)] -= 1
+                del data["shop"]["shops"][id]
+                json_dump(data)
+                await ctx.send("Der Shop wurde gelöscht.", ephemeral=True)
+            else:
+                await ctx.send("Der Shop existiert nicht!", ephemeral=True)
+        else:
+            shop_ids_select_options = get_shop_ids_select_options()
+            shop_ids_selectmenu = dc.SelectMenu(
+                custom_id="shop_id_select",
+                placeholder="Shop-ID",
+                options=shop_ids_select_options
+            )
+            await ctx.send("Bitte wähle einen Shop aus, den du löschen möchtest:", components=shop_ids_selectmenu, ephemeral=True)
+
+
+@bot.component("shop_id_select")
+async def shop_id_select(ctx: dc.ComponentContext, value: list):
+    shop_id = str(value[0])
+    if not ctx.author.id == data["shop"]["shops"][shop_id]["owner"] or not user_is_privileged(ctx.author.roles):
+        await ctx.send("Du bist nicht der Besitzer dieses Shops!", ephemeral=True)
+        return
+    shop_message = await ctx.channel.get_message(data["shop"]["shops"][shop_id]["message_id"])
+    await shop_message.delete()
+    if not data["shop"]["shops"][shop_id]["categorie"] in shop_categories_excluded_from_limit:
+        data["shop"]["count"][str(ctx.author.id)] -= 1
+    del data["shop"]["shops"][shop_id]
+    json_dump(data)
+    await ctx.edit("Der Shop wurde gelöscht.", components=[])
 
 
 @bot.component("shop_abort")
@@ -843,8 +910,7 @@ async def shop_abort(ctx: dc.ComponentContext):
 @dc.autodefer()
 async def categorie_select(ctx: dc.ComponentContext, value: list):
     shop_message = ctx.message.content
-    identifier = int(
-        re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1))
+    identifier = int(re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1))
     if not str(ctx.author.id) in data["shop"]["count"]:
         data["shop"]["count"][str(ctx.author.id)] = 0
     elif not value[0] in shop_categories_excluded_from_limit:
@@ -906,8 +972,7 @@ async def categorie_select(ctx: dc.ComponentContext, value: list):
 @bot.modal("shop_create")
 async def mod_shop_create(ctx: dc.CommandContext, name: str, offer: str, location: str, dm_description: str):
     shop_message = ctx.message.content
-    identifier = int(
-        re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1))
+    identifier = re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1)
     data["shop"]["shops"][identifier] = {
         "name": name,
         "offer": offer,
@@ -936,5 +1001,6 @@ async def mod_shop_create(ctx: dc.CommandContext, name: str, offer: str, locatio
     json_dump(data)
     del shop_transfer_data[identifier]
     await ctx.send("Shop erstellt.", ephemeral=True)
+
 
 bot.start()
