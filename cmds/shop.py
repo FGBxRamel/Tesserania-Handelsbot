@@ -12,12 +12,12 @@ class ShopCommand(dc.Extension):
         self.client: dc.Client = client
         self.refresh_config()
         self.refresh_components()
-        self.data_folder_path = "../data/shop/"
+        self.data_folder_path = "data/shop/"
         self.data_file_path = self.data_folder_path + "shop.json"
         self.load_data()
 
     def refresh_config(self):
-        with open('../config.ini', 'r') as config_file:
+        with open('config.ini', 'r') as config_file:
             config = cp.ConfigParser()
             config.read_file(config_file)
             self.count_limit = config.getint('Shops', 'max_shops_per_person')
@@ -52,14 +52,16 @@ class ShopCommand(dc.Extension):
         )
 
     def save_data(self):
-        with open('../data/shop/shop.json', 'w+') as data_file:
+        with open(self.data_file_path, 'w+') as data_file:
             json.dump(self.data, data_file, indent=4)
 
     def load_data(self):
         try:
             with open(self.data_file_path, 'r') as data_file:
                 self.data = json.load(data_file)
-        except json.decoder.JSONDecodeError or FileNotFoundError:
+        except json.decoder.JSONDecodeError:
+            self.setup_data_file()
+        except FileNotFoundError:
             self.setup_data_file()
 
     def setup_data_file(self):
@@ -102,7 +104,7 @@ class ShopCommand(dc.Extension):
     @dc.extension_command(
         name="shop",
         description="Der Command für das Handelsregister.",
-        scope=self.scope_ids,  # FIXME need the scope IDs somehow
+        scope=993913459169300540,  # FIXME need the scope IDs somehow
         options=[
             dc.Option(
                 name="aktion",
@@ -196,7 +198,7 @@ class ShopCommand(dc.Extension):
     @dc.autodefer()
     async def categorie_select(self, ctx: dc.ComponentContext, value: list):
         shop_message = ctx.message.content
-        identifier = int(re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1))
+        identifier = re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1)
         if not str(ctx.author.id) in self.data["count"]:
             self.data["count"][str(ctx.author.id)] = 0
         elif not value[0] in self.categories_excluded_from_limit:
@@ -286,3 +288,7 @@ class ShopCommand(dc.Extension):
         self.save_data()
         del self.transfer_data[identifier]
         await ctx.send("Shop erstellt.", ephemeral=True)
+
+
+def setup(client):
+    ShopCommand(client)

@@ -11,24 +11,15 @@ from interactions.ext.get import get
 with open('config.ini', 'r') as config_file:
     config = cp.ConfigParser()
     config.read_file(config_file)
+
 TOKEN = config.get('General', 'token')
 SERVER_IDS = config.get('IDs', 'server').split(',')
 privileged_roles_ids = [int(id) for id in config.get(
     'IDs', 'privileged_roles').split(',')]
 offer_channel_id = config.getint('IDs', 'offer_channel')
 voting_channel_id = config.getint('IDs', 'voting_channel')
-
-
-def read_config() -> dict:
-    voting_options = {"voting_role_to_ping_id": int(config.get(
-        'IDs', 'voting_role_to_ping')), }
-
-    wichteln_options = {"wichtel_role_id": int(
-        config.get('IDs', 'wichtel_role'))}
-
-    options = {"voting": voting_options, "wichteln": wichteln_options}
-    return options
-
+voting_role_to_ping_id = config.getint('IDs', 'voting_role_to_ping')
+wichtel_role_id = config.getint('IDs', 'wichtel_role')
 
 bot = dc.Client(
     token=TOKEN)
@@ -41,7 +32,10 @@ emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1
 open("data.json", "a").close()
 open("wichteln.txt", "a").close()
 
+bot.load("cmds.shop")
 
+
+# FIXME FIX THIS, theres functions for that! And after it go shame yourself
 def implement(json_object: dict) -> dict:
     data_dict = {}
     for key, value in json_object.items():
