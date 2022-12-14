@@ -7,7 +7,7 @@ from copy import deepcopy
 
 import interactions as dc
 from interactions.ext.get import get
-
+# TODO Split all the commands into multiple files using extensions... FML
 with open('config.ini', 'r') as config_file:
     config = cp.ConfigParser()
     config.read_file(config_file)
