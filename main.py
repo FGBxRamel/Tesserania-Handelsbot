@@ -1,41 +1,47 @@
 import configparser as cp
 import json
-import re
 from random import randint, shuffle
 from time import localtime, mktime, sleep, strftime, strptime, time
-from copy import deepcopy
+from os import mkdir, path
 
 import interactions as dc
 from interactions.ext.get import get
 # TODO Split all the commands into multiple files using extensions... FML
+
 with open('config.ini', 'r') as config_file:
     config = cp.ConfigParser()
     config.read_file(config_file)
+TOKEN = config.get('General', 'token')
+SERVER_IDS = config.get('IDs', 'server').split(',')
+privileged_roles_ids = [int(id) for id in config.get(
+    'IDs', 'privileged_roles').split(',')]
+offer_channel_id = config.getint('IDs', 'offer_channel')
+voting_channel_id = config.getint('IDs', 'voting_channel')
 
-    TOKEN = config.get('General', 'token')
-    server_ids = config.get('IDs', 'server').split(',')
-    privileged_roles_ids = [int(id) for id in config.get(
-        'IDs', 'privileged_roles').split(',')]
-    voting_role_to_ping_id = int(config.get('IDs', 'voting_role_to_ping'))
-    minecrafter_role_id = int(config.get('IDs', 'minecrafter_role'))
-    offer_channel_id = int(config.get('IDs', 'offer_channel'))
-    voting_channel_id = int(config.get('IDs', 'voting_channel'))
 
-    shop_count_limit = int(config.get('Shops', 'max_shops_per_person'))
-    shop_categories = config.get('Shops', 'categories').split(',')
-    shop_categories_excluded_from_limit = config.get(
-        'Shops', 'categories_excluded_from_limit').split(",")
+def read_config() -> dict:
+    voting_options = {"voting_role_to_ping_id": int(config.get(
+        'IDs', 'voting_role_to_ping')), }
+
+    wichteln_options = {"wichtel_role_id": int(
+        config.get('IDs', 'wichtel_role'))}
+
+    options = {"voting": voting_options, "wichteln": wichteln_options}
+    return options
+
 
 bot = dc.Client(
     token=TOKEN)
 
-scope_ids = server_ids
+scope_ids = SERVER_IDS
 run = False
 emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA",
                "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
 
 open("data.json", "a").close()
 open("wichteln.txt", "a").close()
+if not path.exists("data"):
+    mkdir("data")
 
 
 def implement(json_object: dict) -> dict:
@@ -62,12 +68,12 @@ try:
         data = implement(json.load(data_file))
 except json.JSONDecodeError:
     data = {}
-sections = ["offers", "count", "votings", "wichteln", "shop"]
+sections = ["offers", "count", "votings", "wichteln"]
 for section in sections:
     if section not in data:
         data[section] = {}
 subsections = {"wichteln": {"active": False,
-                            "participants": []}, "shop": {"count": {}, "shops": {}}}
+                            "participants": []}}
 for section, subsections in subsections.items():
     for subsection, value in subsections.items():
         if subsection not in data[section]:
@@ -700,12 +706,12 @@ async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None
             description=text
         )
         guild: dc.Guild = await ctx.get_guild()
-        minecrafter_role: dc.Role = await guild.get_role(minecrafter_role_id)
+        minecrafter_role: dc.Role = await guild.get_role(wichtel_role_id)
         await kanal.send(content=minecrafter_role.mention, embeds=wichteln_embed)
         participants: list[dc.Member] = []
         guild_members = await guild.get_all_members()
         for member in guild_members:
-            if minecrafter_role_id in member.roles:
+            if wichtel_role_id in member.roles:
                 participants.append(member)
         shuffle(participants)
         participants.append(participants[0])
@@ -764,243 +770,6 @@ async def wichteln_text_response(ctx: dc.CommandContext, text: str):
         description=text
     )
     await ctx.send("Der Text wurde gespeichert.", ephemeral=True, embeds=wichteln_text_preview_embed)
-
-
-categories = []
-for category in shop_categories:
-    option = dc.SelectOption(
-        label=category,
-        value=category
-    )
-    categories.append(option)
-
-categorie_selectmenu = dc.SelectMenu(
-    custom_id="categorie_select",
-    placeholder="Kategorie",
-    options=categories
-)
-shop_abort_button = dc.Button(
-    label="Abbrechen",
-    custom_id="shop_abort",
-    style=dc.ButtonStyle.DANGER
-)
-
-
-def get_shop_ids_select_options() -> list[dc.SelectOption]:
-    options = []
-    for shop_id, shop_data in data["shop"]["shops"].items():
-        option = dc.SelectOption(
-            label=shop_id,
-            value=str(shop_id),
-            description=shop_data["name"]
-        )
-        options.append(option)
-    return options
-
-
-@bot.command(
-    name="shop",
-    description="Der Command für das Handelsregister.",
-    scope=scope_ids,
-    options=[
-        dc.Option(
-            name="aktion",
-            description="Die Aktion, die du ausführen möchtest.",
-            type=dc.OptionType.STRING,
-            required=True,
-            choices=[
-                dc.Choice(
-                    name="eintragen",
-                    value="create"
-                ),
-                dc.Choice(
-                    name="bearbeiten",
-                    value="edit"
-                ),
-                dc.Choice(
-                    name="löschen",
-                    value="delete"
-                )
-            ]
-        ),
-        dc.Option(
-            name="id",
-            description="Die ID des Shops, den du bearbeiten oder löschen möchtest.",
-            type=dc.OptionType.INTEGER,
-            required=False,
-            min_value=1000,
-            max_value=9999
-        )
-    ]
-)
-async def shop(ctx: dc.CommandContext, aktion: str, id: str = None):
-    if id:
-        try:
-            int(id)
-            id = str(id)
-        except ValueError:
-            await ctx.send("Die ID hat ein fehlerhaftes Format!", ephemeral=True)
-            return
-    if aktion == "create":
-        identifier = str(randint(1000, 9999))
-        while identifier in data["shop"]["shops"] or identifier in shop_transfer_data:
-            identifier = str(randint(1000, 9999))
-        shop_transfer_data[identifier] = {}
-        row1 = dc.ActionRow(components=[categorie_selectmenu])
-        row2 = dc.ActionRow(components=[shop_abort_button])
-        sent_message = await ctx.send(f"""|| {identifier} ||
-        Bitte wähle eine Kategorie:""", components=[row1, row2], ephemeral=True)
-        shop_transfer_data[identifier]["message_id"] = sent_message.id
-    elif aktion == "edit":
-        await ctx.send("Dieser Command ist noch nicht verfügbar.", ephemeral=True)
-    elif aktion == "delete":
-        if id:
-            if id in data["shop"]["shops"]:
-                if not ctx.author.id == data["shop"]["shops"][id]["owner"] or not user_is_privileged(ctx.author.roles):
-                    await ctx.send("Du bist nicht der Besitzer dieses Shops!", ephemeral=True)
-                    return
-                shop_message = await ctx.channel.get_message(data["shop"]["shops"][id]["message_id"])
-                await shop_message.delete()
-                if not data["shop"]["shops"][id]["categorie"] in shop_categories_excluded_from_limit:
-                    data["shop"]["count"][str(ctx.author.id)] -= 1
-                del data["shop"]["shops"][id]
-                json_dump(data)
-                await ctx.send("Der Shop wurde gelöscht.", ephemeral=True)
-            else:
-                await ctx.send("Der Shop existiert nicht!", ephemeral=True)
-        else:
-            shop_ids_select_options = get_shop_ids_select_options()
-            shop_ids_selectmenu = dc.SelectMenu(
-                custom_id="shop_id_select",
-                placeholder="Shop-ID",
-                options=shop_ids_select_options
-            )
-            await ctx.send("Bitte wähle einen Shop aus, den du löschen möchtest:", components=shop_ids_selectmenu, ephemeral=True)
-
-
-@bot.component("shop_id_select")
-async def shop_id_select(ctx: dc.ComponentContext, value: list):
-    shop_id = str(value[0])
-    if not ctx.author.id == data["shop"]["shops"][shop_id]["owner"] or not user_is_privileged(ctx.author.roles):
-        await ctx.send("Du bist nicht der Besitzer dieses Shops!", ephemeral=True)
-        return
-    shop_message = await ctx.channel.get_message(data["shop"]["shops"][shop_id]["message_id"])
-    await shop_message.delete()
-    if not data["shop"]["shops"][shop_id]["categorie"] in shop_categories_excluded_from_limit:
-        data["shop"]["count"][str(ctx.author.id)] -= 1
-    del data["shop"]["shops"][shop_id]
-    json_dump(data)
-    await ctx.edit("Der Shop wurde gelöscht.", components=[])
-
-
-@bot.component("shop_abort")
-async def shop_abort(ctx: dc.ComponentContext):
-    shop_message_text = ctx.message.content
-    identifier = int(
-        re.match(r"\|\| (\d{4}) \|\|", shop_message_text).group(1))
-    try:
-        del shop_transfer_data[identifier]
-    except KeyError:
-        await ctx.edit("Es gibt keine aktive Shop-Erstellung. Bitte benutze keine Nachricht zweimal!", components=[])
-        return
-    await ctx.edit("Abgebrochen.", components=[])
-
-
-@bot.component("categorie_select")
-@dc.autodefer()
-async def categorie_select(ctx: dc.ComponentContext, value: list):
-    shop_message = ctx.message.content
-    identifier = int(re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1))
-    if not str(ctx.author.id) in data["shop"]["count"]:
-        data["shop"]["count"][str(ctx.author.id)] = 0
-    elif not value[0] in shop_categories_excluded_from_limit:
-        if data["shop"]["count"][str(ctx.author.id)] >= shop_count_limit:
-            try:
-                del shop_transfer_data[identifier]
-            except KeyError:
-                await ctx.edit("Ein Fehler ist aufgetreten. Bitte benutze eine Nachricht nicht zweimal!", components=[])
-                return
-            await ctx.edit("Du hast bereits die maximale Anzahl an Shops erreicht.", components=[])
-            return
-    try:
-        shop_transfer_data[identifier]["categorie"] = value[0]
-    except KeyError:
-        await ctx.edit("Ein Fehler ist aufgetreten. Bitte benutze eine Nachricht nicht zweimal!", components=[])
-        return
-    shop_create_modal = dc.Modal(
-        title="Shop erstellen",
-        description="Hier kannst du einen Shop erstellen.",
-        custom_id="shop_create",
-        components=[
-            dc.TextInput(
-                    label="Name",
-                    placeholder="Name",
-                    custom_id="name",
-                    style=dc.TextStyleType.SHORT,
-                    required=True,
-                    max_length=50
-            ),
-            dc.TextInput(
-                label="Angebot",
-                placeholder="Was bietest du an?",
-                custom_id="offer",
-                style=dc.TextStyleType.PARAGRAPH,
-                required=True,
-                max_length=250
-            ),
-            dc.TextInput(
-                label="Ort",
-                placeholder="Wo befindet sich dein Shop?",
-                custom_id="location",
-                style=dc.TextStyleType.PARAGRAPH,
-                required=True,
-                max_length=100
-            ),
-            dc.TextInput(
-                label="DM-Beschreibung",
-                placeholder="Was soll in der DM stehen?",
-                custom_id="dm_description",
-                style=dc.TextStyleType.PARAGRAPH,
-                required=True,
-                max_length=150
-            )
-        ]
-    )
-    await ctx.popup(shop_create_modal)
-
-
-@bot.modal("shop_create")
-async def mod_shop_create(ctx: dc.CommandContext, name: str, offer: str, location: str, dm_description: str):
-    shop_message = ctx.message.content
-    identifier = re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1)
-    data["shop"]["shops"][identifier] = {
-        "name": name,
-        "offer": offer,
-        "location": location,
-        "dm_description": dm_description,
-        "categorie": shop_transfer_data[identifier]["categorie"],
-        "owner": str(ctx.author.id),
-        "approved": False
-    }
-    shop_embed = dc.Embed(
-        title=name,
-        description=f"""|| {shop_transfer_data[identifier]["categorie"]} ||\n
-        **Angebot:**
-        {offer}\n
-        **Wo:**
-        {location}\n
-        **Besitzer:** {ctx.author.user.username}\n\
-        Shop nicht genehmigt :x: """,
-        color=0xdaa520,
-        footer=dc.EmbedFooter(text=identifier)
-    )
-    sent_message = await ctx.channel.send(embeds=shop_embed)
-    data["shop"]["shops"][identifier]["message_id"] = str(sent_message.id)
-    if not shop_transfer_data[identifier]["categorie"] in shop_categories_excluded_from_limit:
-        data["shop"]["count"][str(ctx.author.id)] += 1
-    json_dump(data)
-    del shop_transfer_data[identifier]
-    await ctx.send("Shop erstellt.", ephemeral=True)
 
 
 bot.start()
