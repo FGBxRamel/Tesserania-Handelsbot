@@ -19,7 +19,6 @@ privileged_roles_ids = [int(id) for id in config.get(
 offer_channel_id = config.getint('IDs', 'offer_channel')
 voting_channel_id = config.getint('IDs', 'voting_channel')
 voting_role_to_ping_id = config.getint('IDs', 'voting_role_to_ping')
-wichtel_role_id = config.getint('IDs', 'wichtel_role')
 
 bot = dc.Client(
     token=TOKEN)
@@ -33,6 +32,7 @@ open("data.json", "a").close()
 open("wichteln.txt", "a").close()
 
 bot.load("cmds.shop")
+bot.load("cmds.wichteln")
 
 
 # FIXME FIX THIS, theres functions for that! And after it go shame yourself
@@ -60,16 +60,10 @@ try:
         data = implement(json.load(data_file))
 except json.JSONDecodeError:
     data = {}
-sections = ["offers", "count", "votings", "wichteln"]
+sections = ["offers", "count", "votings"]
 for section in sections:
     if section not in data:
         data[section] = {}
-subsections = {"wichteln": {"active": False,
-                            "participants": []}}
-for section, subsections in subsections.items():
-    for subsection, value in subsections.items():
-        if subsection not in data[section]:
-            data[section][subsection] = value
 
 json_dump(data)
 
@@ -644,124 +638,6 @@ async def close_voting_response(ctx: dc.CommandContext, id: str):
     del data["votings"][id]
     json_dump(data)
     await ctx.send("Die Abstimmung wurde beendet.", ephemeral=True)
-
-
-@bot.command(
-    name="wichteln",
-    description="Der Befehl für das Wichteln.",
-    scope=scope_ids,
-    options=[
-        dc.Option(
-            name="aktion",
-            description="Das, was du tuen willst.",
-            type=dc.OptionType.STRING,
-            required=True,
-            choices=[
-                dc.Choice(
-                    name="starten",
-                    value="start"
-                ),
-                dc.Choice(
-                    name="beenden",
-                    value="end"
-                ),
-                dc.Choice(
-                    name="bearbeiten",
-                    value="edit"
-                )
-            ]
-        ),
-        dc.Option(
-            name="kanal",
-            description="Der Kanal, in dem die Wichtelung stattfinden soll.",
-            type=dc.OptionType.CHANNEL,
-            required=False
-        ),
-    ]
-)
-async def wichteln(ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None):
-    if aktion == "start":
-        if not kanal:
-            await ctx.send("Du musst einen Kanal angeben!", ephemeral=True)
-            return
-        if data["wichteln"]["active"]:
-            await ctx.send("Es gibt bereits eine Wichtelung.", ephemeral=True)
-            return
-        await ctx.defer(ephemeral=True)
-        data["wichteln"]["participants"] = []
-        text = ""
-        with open("wichteln.txt", "r") as f:
-            text = f.read()
-        text.replace("$year$", strftime("%Y"))
-        wichteln_embed = dc.Embed(
-            title="Wichteln",
-            description=text
-        )
-        guild: dc.Guild = await ctx.get_guild()
-        minecrafter_role: dc.Role = await guild.get_role(wichtel_role_id)
-        await kanal.send(content=minecrafter_role.mention, embeds=wichteln_embed)
-        participants: list[dc.Member] = []
-        guild_members = await guild.get_all_members()
-        for member in guild_members:
-            if wichtel_role_id in member.roles:
-                participants.append(member)
-        shuffle(participants)
-        participants.append(participants[0])
-        i = 0
-        for participant in participants:
-            if i == len(participants) - 1:
-                break
-            data["wichteln"]["participants"].append(int(participant.id))
-            partner = participants[i + 1].user.username
-            await participant.send(f"Du bist Wichtel von {partner}!\nFür mehr Infos schaue bitte auf {guild.name}.")
-            i += 1
-        data["wichteln"]["active"] = True
-        json_dump(data)
-        await ctx.send("Die Wichtelung wurde erstellt.", ephemeral=True)
-    elif aktion == "end":
-        if not data["wichteln"]["active"]:
-            await ctx.send("Es gibt keine aktive Wichtelung.", ephemeral=True)
-            return
-        await ctx.defer(ephemeral=True)
-        guild: dc.Guild = await ctx.get_guild()
-        guild_id = int(guild.id)
-        participants = await dc.get(bot, list[dc.Member], parent_id=guild_id, object_ids=data["wichteln"]["participants"])
-        for participant in participants:
-            await participant.send(f"Die Wichtelung von {guild.name} wurde beendet.")
-        data["wichteln"]["active"] = False
-        json_dump(data)
-        await ctx.send("Die Wichtelung wurde beendet.", ephemeral=True)
-    elif aktion == "edit":
-        with open("wichteln.txt", "r") as f:
-            text = f.read()
-        wichteln_text_modal = dc.Modal(
-            title="Wichteltext bearbeiten",
-            description="Hier kannst du den Text für die Wichtelung bearbeiten.",
-            custom_id="wichteln_text",
-            components=[
-                dc.TextInput(
-                    label="Text",
-                    placeholder="Text",
-                    value=text,
-                    custom_id="text",
-                    style=dc.TextStyleType.PARAGRAPH,
-                    required=True
-                )
-            ]
-        )
-        await ctx.popup(wichteln_text_modal)
-
-
-@bot.modal("wichteln_text")
-async def wichteln_text_response(ctx: dc.CommandContext, text: str):
-    with open("wichteln.txt", "w") as f:
-        f.write(text)
-    text = text.replace("$year$", strftime("%Y"))
-    wichteln_text_preview_embed = dc.Embed(
-        title="Textvorschau",
-        description=text
-    )
-    await ctx.send("Der Text wurde gespeichert.", ephemeral=True, embeds=wichteln_text_preview_embed)
 
 
 bot.start()
