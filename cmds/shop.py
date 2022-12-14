@@ -157,9 +157,10 @@ class ShopCommand(dc.Extension):
         elif aktion == "edit":
             await ctx.send("Dieser Command ist noch nicht verfügbar.", ephemeral=True)
         elif aktion == "delete":
+            # TODO No ID option, only the select menu with the shops the user has
             if id:
                 if id in self.data["shops"]:
-                    if not ctx.author.id == self.data["shops"][id]["owner"] or not self.user_is_privileged(ctx.author.roles):
+                    if not str(ctx.author.id) == self.data["shops"][id]["owner"] and not self.user_is_privileged(ctx.author.roles):
                         await ctx.send("Du bist nicht der Besitzer dieses Shops!", ephemeral=True)
                         return
                     shop_message = await ctx.channel.get_message(self.data["shops"][id]["message_id"])
@@ -183,7 +184,7 @@ class ShopCommand(dc.Extension):
     @dc.extension_component("shop_id_select")
     async def shop_id_select(self, ctx: dc.ComponentContext, value: list):
         shop_id = str(value[0])
-        if not ctx.author.id == self.data["shops"][shop_id]["owner"] or not self.user_is_privileged(ctx.author.roles):
+        if not str(ctx.author.id) == self.data["shops"][shop_id]["owner"] and not self.user_is_privileged(ctx.author.roles):
             await ctx.send("Du bist nicht der Besitzer dieses Shops!", ephemeral=True)
             return
         shop_message = await ctx.channel.get_message(self.data["shops"][shop_id]["message_id"])
