@@ -21,6 +21,8 @@ class WichtelCommand(dc.Extension):
             config = cp.ConfigParser()
             config.read_file(config_file)
             self.wichtel_role_id = config.getint('IDs', 'wichtel_role')
+            global scope_ids
+            scope_ids = config.get('IDs', 'server').split(',')
 
     def save_data(self):
         with open(self.data_file_path, 'w+') as data_file:
@@ -51,7 +53,7 @@ class WichtelCommand(dc.Extension):
     @dc.extension_command(
         name="wichteln",
         description="Der Befehl für das Wichteln.",
-        scope=993913459169300540,  # FIXME Scope problem
+        scope=scope_ids,
         options=[
             dc.Option(
                 name="aktion",
