@@ -1,7 +1,7 @@
 import configparser as cp
 import json
 import re
-from os import path
+from os import path, makedirs
 from random import randint
 
 import interactions as dc
@@ -12,8 +12,8 @@ class ShopCommand(dc.Extension):
         self.client: dc.Client = client
         self.refresh_config()
         self.refresh_components()
-        if not path.exists("../data/shop.json"):
-            open("../data/shop.json", "a").close()
+        self.data_folder_path = "../data/shop/"
+        self.data_file_path = self.data_folder_path + "shop.json"
         self.load_data()
 
     def refresh_config(self):
@@ -52,17 +52,21 @@ class ShopCommand(dc.Extension):
         )
 
     def save_data(self):
-        with open('../data/shop.json', 'w+') as data_file:
+        with open('../data/shop/shop.json', 'w+') as data_file:
             json.dump(self.data, data_file, indent=4)
 
     def load_data(self):
         try:
-            with open('../data/shop.json', 'r') as data_file:
+            with open(self.data_file_path, 'r') as data_file:
                 self.data = json.load(data_file)
-        except json.decoder.JSONDecodeError:
+        except json.decoder.JSONDecodeError or FileNotFoundError:
             self.setup_data_file()
 
     def setup_data_file(self):
+        if not path.exists(self.data_folder_path):
+            makedirs(self.data_folder_path)
+        if not path.exists(self.data_file_path):
+            open(self.data_file_path, 'a').close()
         self.data = {
             "count": {},
             "shops": {}

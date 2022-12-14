@@ -40,8 +40,6 @@ emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1
 
 open("data.json", "a").close()
 open("wichteln.txt", "a").close()
-if not path.exists("data"):
-    mkdir("data")
 
 
 def implement(json_object: dict) -> dict:
