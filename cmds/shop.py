@@ -6,6 +6,8 @@ from random import randint
 
 import interactions as dc
 
+scope_ids = []
+
 
 class ShopCommand(dc.Extension):
     def __init__(self, client) -> None:
@@ -24,8 +26,8 @@ class ShopCommand(dc.Extension):
             self.categories = config.get('Shops', 'categories').split(',')
             self.categories_excluded_from_limit = config.get(
                 'Shops', 'categories_excluded_from_limit').split(",")
-            global scope_ids
-            scope_ids = config.get('IDs', 'server').split(',')
+        global scope_ids
+        scope_ids = config.get('IDs', 'server').split(',')
         self.transfer_data = {}
         self.privileged_roles_ids = [int(id) for id in config.get(
             'IDs', 'privileged_roles').split(',')]

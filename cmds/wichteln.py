@@ -6,6 +6,8 @@ from time import strftime
 
 import interactions as dc
 
+scope_ids = []
+
 
 class WichtelCommand(dc.Extension):
     def __init__(self, client) -> None:
