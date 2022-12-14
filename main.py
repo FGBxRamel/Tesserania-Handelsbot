@@ -29,7 +29,6 @@ emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1
                "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
 
 open("data.json", "a").close()
-open("wichteln.txt", "a").close()
 
 bot.load("cmds.shop")
 bot.load("cmds.wichteln")
