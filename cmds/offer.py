@@ -97,6 +97,7 @@ class OfferCommand(dc.Extension):
         ]
     )
     async def offer(self, ctx: dc.CommandContext, aktion: str, id: int = None):
+        # TODO Get rid of the id option and use a selectmenu instead
         if aktion == "create":
             if not str(ctx.author.id) in self.data["count"]:
                 self.data["count"][str(ctx.author.id)] = 0
