@@ -113,9 +113,19 @@ def run_delete(oneshot: bool = False):
     bot._loop.create_task(automatic_delete(oneshot=oneshot))
 
 
-# TODO Make loop (or task) that checks the data file for new votings to start a delete timer
-# Go trough all the votings (structure: list[create_time, wait_time])
+# TODO Make task that checks the data file for new votings to start a delete timer
+# Go trough all the votings (structure: {"id": [create_time, wait_time]})
 # Call bot._loop.call_later(wait_time - (localtime - create time), run_delete, oneshot=True)
+async def check_votings():
+    with open("data.json", "r+") as data_file:
+        data = json.load(data_file)
+    for id, value_list in data["votings"].items():
+        bot._loop.call_later(
+            value_list[1] - (time() - value_list[0]), run_delete, oneshot=True)
+        del data["votings"][id]
+    json_dump(data)
+
+bot._loop.create_task(check_votings())
 
 
 @bot.event()
