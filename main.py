@@ -5,7 +5,6 @@ from time import localtime, mktime, sleep, strftime, strptime, time
 from os import mkdir, path
 
 import interactions as dc
-# TODO Split all the commands into multiple files using extensions... FML
 
 with open('config.ini', 'r') as config_file:
     config = cp.ConfigParser()
@@ -113,7 +112,7 @@ def run_delete(oneshot: bool = False):
     bot._loop.create_task(automatic_delete(oneshot=oneshot))
 
 
-# TODO Make task that checks the data file for new votings to start a delete timer
+# Make task that checks the data file for new votings to start a delete timer
 # Go trough all the votings (structure: {"id": [create_time, wait_time]})
 # Call bot._loop.call_later(wait_time - (localtime - create time), run_delete, oneshot=True)
 async def check_votings():
