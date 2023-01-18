@@ -60,7 +60,7 @@ class OfferCommand(dc.Extension):
         }
         self.save_data()
 
-    def user_is_privileged(self, roles: list) -> bool:
+    def user_is_privileged(self, roles: list[int]) -> bool:
         return any(role in self.privileged_roles_ids for role in roles)
 
     @dc.extension_command(
@@ -97,7 +97,6 @@ class OfferCommand(dc.Extension):
         ]
     )
     async def offer(self, ctx: dc.CommandContext, aktion: str, id: int = None):
-        # TODO Get rid of the id option and use a selectmenu instead
         if aktion == "create":
             if not str(ctx.author.id) in self.data["count"]:
                 self.data["count"][str(ctx.author.id)] = 0
@@ -137,22 +136,25 @@ class OfferCommand(dc.Extension):
             )
             await ctx.popup(create_modal)
         elif aktion == "delete":
-            delete_modal = dc.Modal(
-                title="Angebot löschen",
-                custom_id="mod_delete_offer",
-                components=[
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
-                        label="ID des Angebots",
-                        custom_id="delete_offer_id",
-                        required=True,
-                        min_length=4,
-                        max_length=4,
-                        value=str(id) if id else ""
+            offer_options = []
+            priviledged = self.user_is_privileged(ctx.author.roles)
+            for id, offer_data in self.data["offers"].items():
+                if offer_data["user_id"] == str(ctx.author.id) or priviledged:
+                    offer_options.append(
+                        dc.SelectOption(
+                            label=id,
+                            value=id,
+                            description=offer_data["title"]
+                        )
                     )
-                ]
+            delete_selectmenu = dc.SelectMenu(
+                custom_id="delete_offer_menu",
+                placeholder="Wähle ein Angebot aus",
+                options=offer_options,
+                min_values=1,
+                max_values=3
             )
-            await ctx.popup(delete_modal)
+            await ctx.send("Wähle die Angebote aus, die du löschen möchtest.", components=delete_selectmenu, ephemeral=True)
         elif aktion == "edit":
             try:
                 edit_id_modal = dc.Modal(
@@ -191,6 +193,8 @@ class OfferCommand(dc.Extension):
 
     @dc.extension_modal("mod_create_offer")
     async def create_offer_respone(self, ctx: dc.CommandContext, title: str, price: str, offer_text: str, deadline: str):
+        # TODO Write into the transfer-data file for automatic delete (see votings)
+        await ctx.send("Dein Angebot wird erstellt...", ephemeral=True)
         identifier = randint(1000, 9999)
         while identifier in self.data["offers"]:
             identifier = randint(1000, 9999)
@@ -226,32 +230,21 @@ class OfferCommand(dc.Extension):
         self.save_data()
         await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
 
-    @dc.extension_modal("mod_delete_offer")
-    async def delete_offer_response(self, ctx: dc.CommandContext, id: str):
-        try:
-            int(id)
-        except ValueError:
-            await ctx.send("Die ID hat ein fehlerhaftes Format!", ephemeral=True)
-            return
-        except BaseException as e:
-            await ctx.send(
-                f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
-            return
-        if id not in self.data["offers"]:
-            await ctx.send("Diese ID existiert nicht!", ephemeral=True)
-            return
-        if not self.data["offers"][id]["user_id"] == str(ctx.author.id) and not self.user_is_privileged(ctx.author.roles):
-            await ctx.send("Du bist nicht berechtigt dieses Angebot zu löschen!",
-                           ephemeral=True)
-            return
+    @dc.extension_component("delete_offer_menu")
+    @dc.autodefer(ephemeral=True)
+    async def delete_offer_response(self, ctx: dc.CommandContext, ids: list):
         offer_channel: dc.Channel = await ctx.get_channel()
-        offer_message: dc.Message = await offer_channel.get_message(self.data["offers"][id]["message_id"])
-        await offer_message.delete(reason=f"[Manuell] {ctx.author.user.username}")
-        del self.data["offers"][id]
-        self.data["count"][str(ctx.author.id)
-                           ] = self.data["count"][str(ctx.author.id)] - 1
+        for id in ids:
+            if id not in self.data["offers"]:
+                await ctx.send(f"Die ID {id} existiert nicht!", ephemeral=True)
+                return
+            offer_message: dc.Message = await offer_channel.get_message(self.data["offers"][id]["message_id"])
+            await offer_message.delete(reason=f"[Manuell] {ctx.author.user.username}")
+            del self.data["offers"][id]
+            self.data["count"][str(ctx.author.id)
+                               ] = self.data["count"][str(ctx.author.id)] - 1
         self.save_data()
-        await ctx.send("Das Angebot wurde gelöscht.", ephemeral=True)
+        await ctx.send("Die Angebote wurden gelöscht.", ephemeral=True)
 
     @dc.extension_modal("mod_edit_offer")
     async def edit_offer_id(self, ctx: dc.CommandContext, title: str, text: str, id: str = ""):

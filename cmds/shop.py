@@ -78,18 +78,20 @@ class ShopCommand(dc.Extension):
         }
         self.save_data()
 
-    def get_shop_ids_select_options(self) -> list[dc.SelectOption]:
+    def get_shop_ids_select_options(self, user_id: str, user_roles: list[int]) -> list[dc.SelectOption]:
         options = []
+        priviliged = self.user_is_privileged(user_roles)
         for shop_id, shop_data in self.data["shops"].items():
-            option = dc.SelectOption(
-                label=shop_id,
-                value=str(shop_id),
-                description=shop_data["name"]
-            )
-            options.append(option)
+            if shop_data["owner"] == user_id or priviliged:
+                option = dc.SelectOption(
+                    label=shop_id,
+                    value=str(shop_id),
+                    description=shop_data["name"]
+                )
+                options.append(option)
         return options
 
-    def user_is_privileged(self, roles: list) -> bool:
+    def user_is_privileged(self, roles: list[int]) -> bool:
         return any(role in self.privileged_roles_ids for role in roles)
 
     @dc.extension_component("shop_abort")
@@ -158,38 +160,20 @@ class ShopCommand(dc.Extension):
             Bitte wähle eine Kategorie:""", components=[row1, row2], ephemeral=True)
             self.transfer_data[identifier]["message_id"] = sent_message.id
         elif aktion == "edit":
+            # TODO Make this work
             await ctx.send("Dieser Command ist noch nicht verfügbar.", ephemeral=True)
         elif aktion == "delete":
-            # TODO No ID option, only the select menu with the shops the user has
-            if id:
-                if id in self.data["shops"]:
-                    if not str(ctx.author.id) == self.data["shops"][id]["owner"] and not self.user_is_privileged(ctx.author.roles):
-                        await ctx.send("Du bist nicht der Besitzer dieses Shops!", ephemeral=True)
-                        return
-                    shop_message = await ctx.channel.get_message(self.data["shops"][id]["message_id"])
-                    await shop_message.delete()
-                    if not self.data["shops"][id]["categorie"] in self.categories_excluded_from_limit:
-                        self.data["count"][str(ctx.author.id)] -= 1
-                    del self.data["shops"][id]
-                    self.save_data()
-                    await ctx.send("Der Shop wurde gelöscht.", ephemeral=True)
-                else:
-                    await ctx.send("Der Shop existiert nicht!", ephemeral=True)
-            else:
-                shop_ids_select_options = self.get_shop_ids_select_options()
-                shop_ids_selectmenu = dc.SelectMenu(
-                    custom_id="shop_id_select",
-                    placeholder="Shop-ID",
-                    options=shop_ids_select_options
-                )
-                await ctx.send("Bitte wähle einen Shop aus, den du löschen möchtest:", components=shop_ids_selectmenu, ephemeral=True)
+            shop_ids_select_options = self.get_shop_ids_select_options()
+            shop_ids_selectmenu = dc.SelectMenu(
+                custom_id="shop_delete_id_select",
+                placeholder="Shop-ID",
+                options=shop_ids_select_options
+            )
+            await ctx.send("Bitte wähle einen Shop aus, den du löschen möchtest:", components=shop_ids_selectmenu, ephemeral=True)
 
-    @dc.extension_component("shop_id_select")
-    async def shop_id_select(self, ctx: dc.ComponentContext, value: list):
+    @dc.extension_component("shop_delete_id_select")
+    async def shop_delete_id_select(self, ctx: dc.ComponentContext, value: list):
         shop_id = str(value[0])
-        if not str(ctx.author.id) == self.data["shops"][shop_id]["owner"] and not self.user_is_privileged(ctx.author.roles):
-            await ctx.send("Du bist nicht der Besitzer dieses Shops!", ephemeral=True)
-            return
         shop_message = await ctx.channel.get_message(self.data["shops"][shop_id]["message_id"])
         await shop_message.delete()
         if not self.data["shops"][shop_id]["categorie"] in self.categories_excluded_from_limit:

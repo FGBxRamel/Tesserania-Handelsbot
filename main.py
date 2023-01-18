@@ -23,14 +23,13 @@ bot = dc.Client(
 
 scope_ids = SERVER_IDS
 run = False
-emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA",
-               "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
 
 open("data.json", "a").close()
 
 bot.load("cmds.shop")
 bot.load("cmds.wichteln")
 bot.load("cmds.offer")
+bot.load("cmds.voting")
 
 
 def json_dump(data_dict: dict) -> None:
@@ -113,7 +112,9 @@ def run_delete(oneshot: bool = False):
 
 
 # Make task that checks the data file for new votings to start a delete timer
-# Go trough all the votings (structure: {"id": [create_time, wait_time]})
+# Go trough all the votings (structure:
+# {votings: [{"id": [create_time, wait_time]}]}
+# )
 # Call bot._loop.call_later(wait_time - (localtime - create time), run_delete, oneshot=True)
 async def check_votings():
     with open("data.json", "r+") as data_file:
