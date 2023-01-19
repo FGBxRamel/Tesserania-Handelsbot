@@ -46,12 +46,8 @@ try:
         data = json.load(data_file)
 except json.JSONDecodeError:
     data = {}
-sections = ["votings"]
-for section in sections:
-    if section not in data:
-        data[section] = {}
-
-json_dump(data)
+    json_dump(data)
+votings_timer_started: set = set()
 
 
 def evaluate_voting(message: dc.Message) -> str:
@@ -111,19 +107,19 @@ def run_delete(oneshot: bool = False):
     bot._loop.create_task(automatic_delete(oneshot=oneshot))
 
 
-# Make task that checks the data file for new votings to start a delete timer
-# Go trough all the votings (structure:
-# {votings: [{"id": [create_time, wait_time]}]}
-# )
+# Make task that checks the votings file for new votings to start a delete timer
+# Go trough all the votings
 # Call bot._loop.call_later(wait_time - (localtime - create time), run_delete, oneshot=True)
+# Add voting ID to list so there's no duplicate timers
+# TODO Test this
 async def check_votings():
-    with open("data.json", "r+") as data_file:
-        data = json.load(data_file)
-    for id, value_list in data["votings"].items():
-        bot._loop.call_later(
-            value_list[1] - (time() - value_list[0]), run_delete, oneshot=True)
-        del data["votings"][id]
-    json_dump(data)
+    with open(data["voting"]["data_file"], "r+") as data_file:
+        votings: dict = json.load(data_file)
+    for id, value_list in votings.items():
+        if id not in votings_timer_started:
+            bot._loop.call_later(
+                value_list["wait_time"] - (time() - value_list["create_time"]), run_delete, oneshot=True)
+            votings_timer_started.add(id)
 
 bot._loop.create_task(check_votings())
 

@@ -7,7 +7,6 @@ from random import randint
 import interactions as dc
 
 scope_ids = []
-# TODO The syncing with the main file is not working properly ig
 
 
 class VotingCommand(dc.Extension):
@@ -18,7 +17,7 @@ class VotingCommand(dc.Extension):
         self.emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA",
                             "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
         self.refresh_config()
-        self.load_data()
+        self.setup_data()
 
     def refresh_config(self) -> None:
         with open('config.ini', 'r') as config_file:
@@ -36,19 +35,23 @@ class VotingCommand(dc.Extension):
             json.dump(self.data, data_file, indent=4)
 
     def load_data(self) -> None:
-        try:
-            with open(self.data_file_path, 'r') as data_file:
-                self.data = json.load(data_file)
-        except json.decoder.JSONDecodeError:
-            self.setup_data()
-        except FileNotFoundError:
-            self.setup_data()
+        with open(self.data_file_path, 'r') as data_file:
+            self.data = json.load(data_file)
 
     def setup_data(self) -> None:
+        def create_data_file():
+            open(self.data_file_path, 'a').close()
+            self.data = {}
+            self.save_data()
         if not path.exists(self.data_folder_path):
             makedirs(self.data_folder_path)
-        if not path.exists(self.data_file_path):
-            open(self.data_file_path, 'a').close()
+        if path.exists(self.data_file_path):
+            try:
+                self.load_data()
+            except json.decoder.JSONDecodeError:
+                create_data_file()
+        else:
+            create_data_file()
         with open("data.json", "w+") as data_file:
             # Do it so the main file knows where the votings are stored
             try:
@@ -58,14 +61,6 @@ class VotingCommand(dc.Extension):
             transfer_data["voting"] = {
                 "data_file": self.data_file_path,
             }
-            json.dump(transfer_data, data_file, indent=4)
-        self.data = {}
-        self.save_data()
-
-    def save_to_transfer_file(self, id, wait_time) -> None:
-        with open("data.json", "r+") as data_file:
-            transfer_data = json.load(data_file)
-            transfer_data["votings"][id] = [localtime(), wait_time]
             json.dump(transfer_data, data_file, indent=4)
 
     def user_is_privileged(self, roles: list) -> bool:
@@ -214,6 +209,7 @@ class VotingCommand(dc.Extension):
             await ctx.popup(close_modal)
 
     @dc.extension_modal("mod_create_voting")
+    @dc.autodefer()
     async def create_voting_response(self, ctx: dc.CommandContext, text: str, count: str, deadline: str):
         if int(count) > 10:
             await ctx.send("""Entschuldige, mehr als 10 Möglichkeiten
@@ -241,20 +237,21 @@ class VotingCommand(dc.Extension):
         except ValueError:
             await ctx.send("Die Uhrzeit hat ein falsches Format.", ephemeral=True)
             return
+        deadline_in_seconds = float(deadline) * time_in_seconds
         identifier = randint(1000, 9999)
         while identifier in self.data:
             identifier = randint(1000, 9999)
 
+        end_time = time() + deadline_in_seconds
         self.data[str(identifier)] = {
             "user_id": str(ctx.author.id),
-            "text": text
+            "text": text,
+            "create_time": time(),
+            "wait_time": deadline_in_seconds,
+            "deadline": end_time
         }
 
-        count = 2 if int(count) < 2 else count
-        end_time = time() + float(deadline) * time_in_seconds
-        self.data["votings"][str(identifier)]["deadline"] = end_time
         wait_time = end_time - time()
-        self.save_to_transfer_file(identifier, wait_time)
         end_time = strftime("%d.%m.") + "- " + \
             strftime("%d.%m. %H:%M", localtime(int(end_time)))
 
@@ -271,6 +268,7 @@ class VotingCommand(dc.Extension):
         channel = await ctx.get_channel()
         sent_message = await channel.send(content=voting_role_to_ping.mention, embeds=voting_embed)
         emote_index = 0
+        count = 2 if int(count) < 2 else count
         while int(count) > emote_index:
             await sent_message.create_reaction(self.emote_chars[emote_index])
             emote_index += 1
