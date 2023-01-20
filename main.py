@@ -3,6 +3,7 @@ import json
 from random import randint, shuffle
 from time import localtime, mktime, sleep, strftime, strptime, time
 from os import mkdir, path
+from functools import partial
 
 import interactions as dc
 
@@ -70,8 +71,8 @@ def evaluate_voting(message: dc.Message) -> str:
 async def automatic_delete(oneshot: bool = False) -> None:
     if not oneshot:
         bot._loop.call_later(86400, run_delete)
-    offer_channel: dc.Channel = await dc.get(bot, dc.Channel, channel_id=offer_channel_id)
-    voting_channel: dc.Channel = await dc.get(bot, dc.Channel, channel_id=voting_channel_id)
+    offer_channel: dc.Channel = await dc.get(bot, dc.Channel, object_id=offer_channel_id)
+    voting_channel: dc.Channel = await dc.get(bot, dc.Channel, object_id=voting_channel_id)
     current_time = time()
     delete_offer_ids, delete_voting_ids = [], []
     with open(data["offer"]["data_file"], "r") as offer_file:
@@ -118,7 +119,7 @@ async def check_votings():
     for id, value_list in votings.items():
         if id not in votings_timer_started:
             bot._loop.call_later(
-                value_list["wait_time"] - (time() - value_list["create_time"]), run_delete, oneshot=True)
+                value_list["wait_time"] - (time() - value_list["create_time"]), partial(run_delete, oneshot=True))
             votings_timer_started.add(id)
 
 bot._loop.create_task(check_votings())

@@ -15,7 +15,7 @@ class OfferCommand(dc.Extension):
         self.data_folder_path = 'data/offer/'
         self.data_file_path = self.data_folder_path + 'offer.json'
         self.refresh_config()
-        self.load_data()
+        self.setup_data()
 
     def refresh_config(self):
         with open('config.ini', 'r') as config_file:
@@ -31,34 +31,38 @@ class OfferCommand(dc.Extension):
             json.dump(self.data, data_file, indent=4)
 
     def load_data(self):
-        try:
-            with open(self.data_file_path, 'r') as data_file:
-                self.data = json.load(data_file)
-        except json.decoder.JSONDecodeError:
-            self.setup_data()
-        except FileNotFoundError:
-            self.setup_data()
+        with open(self.data_file_path, 'r') as data_file:
+            self.data = json.load(data_file)
 
     def setup_data(self):
+        def create_data_file():
+            open(self.data_file_path, 'a').close()
+            self.data = {
+                "offers": {},
+                "count": {}
+            }
+            self.save_data()
         if not path.exists(self.data_folder_path):
             makedirs(self.data_folder_path)
-        if not path.exists(self.data_file_path):
-            open(self.data_file_path, 'a').close()
+        if path.exists(self.data_file_path):
+            try:
+                self.load_data()
+            except json.decoder.JSONDecodeError:
+                create_data_file()
+        else:
+            create_data_file()
         with open("data.json", "w+") as data_file:
             # Do it so the main file knows where the offers are stored
             try:
                 transfer_data = json.load(data_file)
-            except json.decoder.JSONDecodeError:
+            except json.decoder.JSONDecodeError as e:
+                print(e)
                 transfer_data = {}
             transfer_data["offer"] = {
                 "data_file": self.data_file_path,
             }
+            # TODO This doesn't save? WTF?
             json.dump(transfer_data, data_file, indent=4)
-        self.data = {
-            "offers": {},
-            "count": {}
-        }
-        self.save_data()
 
     def user_is_privileged(self, roles: list[int]) -> bool:
         return any(role in self.privileged_roles_ids for role in roles)
@@ -193,7 +197,6 @@ class OfferCommand(dc.Extension):
 
     @dc.extension_modal("mod_create_offer")
     async def create_offer_respone(self, ctx: dc.CommandContext, title: str, price: str, offer_text: str, deadline: str):
-        # TODO Write into the transfer-data file for automatic delete (see votings)
         await ctx.send("Dein Angebot wird erstellt...", ephemeral=True)
         identifier = randint(1000, 9999)
         while identifier in self.data["offers"]:
