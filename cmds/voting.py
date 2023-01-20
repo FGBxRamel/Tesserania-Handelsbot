@@ -52,12 +52,15 @@ class VotingCommand(dc.Extension):
                 create_data_file()
         else:
             create_data_file()
-        with open("data.json", "w+") as data_file:
+        with open("data.json", "r+") as data_file:
             # Do it so the main file knows where the votings are stored
             try:
                 transfer_data = json.load(data_file)
             except json.decoder.JSONDecodeError:
-                transfer_data = {}
+                data_file_content = data_file.read()
+                print(
+                    f"data.json could not be loaded! It probably is empty.\n{data_file_content}")
+                exit()
             transfer_data["voting"] = {
                 "data_file": self.data_file_path,
             }
