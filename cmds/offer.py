@@ -51,17 +51,17 @@ class OfferCommand(dc.Extension):
                 create_data_file()
         else:
             create_data_file()
-        with open("data.json", "w+") as data_file:
-            # Do it so the main file knows where the offers are stored
+        with open("data.json", "r") as data_file:
             try:
                 transfer_data = json.load(data_file)
             except json.decoder.JSONDecodeError as e:
                 print(e)
                 transfer_data = {}
+        with open("data.json", "w") as data_file:
+            # Do it so the main file knows where the offers are stored
             transfer_data["offer"] = {
                 "data_file": self.data_file_path,
             }
-            # TODO This doesn't save? WTF?
             json.dump(transfer_data, data_file, indent=4)
 
     def user_is_privileged(self, roles: list[int]) -> bool:
