@@ -244,6 +244,7 @@ class VotingCommand(dc.Extension):
             return
         deadline_in_seconds = float(deadline) * time_in_seconds
         identifier = randint(1000, 9999)
+        self.load_data()
         while identifier in self.data:
             identifier = randint(1000, 9999)
 
@@ -293,6 +294,7 @@ class VotingCommand(dc.Extension):
             await ctx.send(
                 f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
             return
+        self.load_data()
         if id not in self.data:
             await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
             return
@@ -318,6 +320,7 @@ class VotingCommand(dc.Extension):
             await ctx.send(
                 f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
             return
+        self.load_data()
         if id not in self.data:
             await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
             return
@@ -341,6 +344,7 @@ class VotingCommand(dc.Extension):
     @dc.extension_component("delete_voting_menu")
     async def close_voting(self, ctx: dc.CommandContext, ids: list):
         id = ids[0]
+        self.load_data()
         if id not in self.data:
             await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
             return

@@ -4,6 +4,7 @@ from random import randint, shuffle
 from time import localtime, mktime, sleep, strftime, strptime, time
 from os import mkdir, path
 from functools import partial
+import asyncio
 
 import interactions as dc
 
@@ -87,7 +88,9 @@ async def automatic_delete(oneshot: bool = False) -> None:
             delete_offer_ids.append(id)
             offer_data["count"][values["user_id"]] -= 1
 
-    for id, values in data["votings"].items():
+    with open(data["voting"]["data_file"], "r") as voting_file:
+        votings_data: dict = json.load(voting_file)
+    for id, values in votings_data.items():
         if values["deadline"] <= current_time:
             message: dc.Message = await voting_channel.get_message(int(values["message_id"]))
             message_embed = evaluate_voting(message)
@@ -97,11 +100,12 @@ async def automatic_delete(oneshot: bool = False) -> None:
     for id in delete_offer_ids:
         del offer_data["offers"][id]
     for id in delete_voting_ids:
-        del data["votings"][id]
+        del votings_data[id]
 
-    with open(data["offer"]["data_file"], "w+") as offer_file:
+    with open(data["offer"]["data_file"], "w") as offer_file:
         json.dump(offer_data, offer_file, indent=4)
-    json_dump(data)
+    with open(data["voting"]["data_file"], "w") as voting_file:
+        json.dump(votings_data, voting_file, indent=4)
 
 
 def run_delete(oneshot: bool = False):
@@ -112,17 +116,17 @@ def run_delete(oneshot: bool = False):
 # Go trough all the votings
 # Call bot._loop.call_later(wait_time - (localtime - create time), run_delete, oneshot=True)
 # Add voting ID to list so there's no duplicate timers
-# TODO Test this
 async def check_votings():
-    with open(data["voting"]["data_file"], "r+") as data_file:
-        votings: dict = json.load(data_file)
-    for id, value_list in votings.items():
-        if id not in votings_timer_started:
-            bot._loop.call_later(
-                value_list["wait_time"] - (time() - value_list["create_time"]), partial(run_delete, oneshot=True))
-            votings_timer_started.add(id)
-
-bot._loop.create_task(check_votings())
+    while True:
+        print("Checking votings...")
+        with open(data["voting"]["data_file"], "r") as data_file:
+            votings: dict = json.load(data_file)
+        for id, value_list in votings.items():
+            if id not in votings_timer_started:
+                bot._loop.call_later(
+                    value_list["wait_time"] - (time() - value_list["create_time"]), partial(run_delete, oneshot=True))
+                votings_timer_started.add(id)
+        await asyncio.sleep(30)
 
 
 @bot.event()
@@ -132,6 +136,7 @@ async def on_ready():
         wait_time = mktime(strptime(strftime("%d.%m.%Y") +
                            " 23:59", "%d.%m.%Y %H:%M")) - time()
         bot._loop.call_later(wait_time, run_delete)
+        check_voting_task = bot._loop.create_task(check_votings())
         run = True
 
 
