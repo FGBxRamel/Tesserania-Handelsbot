@@ -160,27 +160,108 @@ class ShopCommand(dc.Extension):
             Bitte wähle eine Kategorie:""", components=[row1, row2], ephemeral=True)
             self.transfer_data[identifier]["message_id"] = sent_message.id
         elif aktion == "edit":
-            # TODO Make this work
             await ctx.send("Dieser Command ist noch nicht verfügbar.", ephemeral=True)
+            shop_ids_select_options = self.get_shop_ids_select_options(
+                str(ctx.user.id), ctx.member.roles)
+            shop_ids_selectmenu = dc.SelectMenu(
+                custom_id="shop_edit_id_select",
+                placeholder="Shop-ID",
+                options=shop_ids_select_options
+            )
+            await ctx.send("Bitte wähle einen Shop aus, den du bearbeiten möchtest:", components=shop_ids_selectmenu, ephemeral=True)
         elif aktion == "delete":
-            shop_ids_select_options = self.get_shop_ids_select_options()
+            shop_ids_select_options = self.get_shop_ids_select_options(
+                str(ctx.user.id), ctx.member.roles)
             shop_ids_selectmenu = dc.SelectMenu(
                 custom_id="shop_delete_id_select",
                 placeholder="Shop-ID",
-                options=shop_ids_select_options
+                options=shop_ids_select_options,
+                min_values=1,
+                max_values=self.count_limit
             )
             await ctx.send("Bitte wähle einen Shop aus, den du löschen möchtest:", components=shop_ids_selectmenu, ephemeral=True)
 
     @dc.extension_component("shop_delete_id_select")
-    async def shop_delete_id_select(self, ctx: dc.ComponentContext, value: list):
-        shop_id = str(value[0])
-        shop_message = await ctx.channel.get_message(self.data["shops"][shop_id]["message_id"])
-        await shop_message.delete()
-        if not self.data["shops"][shop_id]["categorie"] in self.categories_excluded_from_limit:
-            self.data["count"][str(ctx.author.id)] -= 1
-        del self.data["shops"][shop_id]
+    async def shop_delete_id_select(self, ctx: dc.ComponentContext, values: list):
+        for shop_id in value:
+            shop_message = await ctx.channel.get_message(self.data["shops"][shop_id]["message_id"])
+            await shop_message.delete()
+            if not self.data["shops"][shop_id]["categorie"] in self.categories_excluded_from_limit:
+                self.data["count"][str(ctx.author.id)] -= 1
+            del self.data["shops"][shop_id]
         self.save_data()
-        await ctx.edit("Der Shop wurde gelöscht.", components=[])
+        await ctx.edit("Die Shops wurden gelöscht.", components=[])
+
+    @dc.extension_component("shop_edit_id_select")
+    async def shop_edit_id_select(self, ctx: dc.ComponentContext, value: list):
+        shop_id = value[0]
+        shop_modal = dc.Modal(
+            title="Shop bearbeiten",
+            custom_id="shop_edit_modal",
+            description="Hier kannst du deinen Shop bearbeiten.",
+            components=[
+                dc.TextInput(
+                    custom_id="id",
+                    label="ID (NICHT ÄNDERN!)",
+                    value=shop_id,
+                    style=dc.TextInputStyle.SHORT,
+                    required=True
+                ),
+                dc.TextInput(
+                    custom_id="name",
+                    value=self.data["shops"][shop_id]["name"],
+                    label="Name",
+                    style=dc.TextInputStyle.SHORT,
+                    placeholder="Name",
+                    required=True,
+                    max_length=50
+                ),
+                dc.TextInput(
+                    label="Angebot",
+                    placeholder="Was bietest du an?",
+                    custom_id="offer",
+                    style=dc.TextStyleType.PARAGRAPH,
+                    required=True,
+                    max_length=250,
+                    value=self.data["shops"][shop_id]["offer"]
+                ),
+                dc.TextInput(
+                    label="Ort",
+                    placeholder="Wo befindet sich dein Shop?",
+                    custom_id="location",
+                    style=dc.TextStyleType.PARAGRAPH,
+                    required=True,
+                    max_length=100,
+                    value=self.data["shops"][shop_id]["location"]
+                ),
+                dc.TextInput(
+                    label="DM-Beschreibung",
+                    placeholder="Was soll in der DM stehen?",
+                    custom_id="dm_description",
+                    style=dc.TextStyleType.PARAGRAPH,
+                    required=True,
+                    max_length=150,
+                    value=self.data["shops"][shop_id]["dm_description"]
+                )
+            ]
+        )
+        ctx.popup(shop_modal)
+
+    @dc.extension_modal("shop_edit_modal")
+    async def shop_edit_modal(self, ctx: dc.ComponentContext, id: str, name: str, offer: str, location: str, dm_description: str):
+        if id in self.data["shops"]:
+            shop_message = await ctx.channel.get_message(self.data["shops"][id]["message_id"])
+            shop_embed = shop_message.embeds[0]
+            #TODO Make a regex to replace all this... Yay...
+            self.data["shops"][id]["name"] = name
+            self.data["shops"][id]["offer"] = offer
+            self.data["shops"][id]["location"] = location
+            self.data["shops"][id]["dm_description"] = dm_description
+            self.save_data()
+            await ctx.edit("Dein Shop wurde erfolgreich bearbeitet!", components=[])
+        else:
+            await ctx.edit("Du hast die ID verändert... Warum bist du so?")
+        
 
     @dc.extension_component("categorie_select")
     @dc.autodefer()
