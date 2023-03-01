@@ -118,7 +118,6 @@ def run_delete(oneshot: bool = False):
 # Add voting ID to list so there's no duplicate timers
 async def check_votings():
     while True:
-        print("Checking votings...")
         with open(data["voting"]["data_file"], "r") as data_file:
             votings: dict = json.load(data_file)
         for id, value_list in votings.items():
@@ -136,7 +135,7 @@ async def on_ready():
         wait_time = mktime(strptime(strftime("%d.%m.%Y") +
                            " 23:59", "%d.%m.%Y %H:%M")) - time()
         bot._loop.call_later(wait_time, run_delete)
-        check_voting_task = bot._loop.create_task(check_votings())
+        bot._loop.create_task(check_votings())
         run = True
 
 

@@ -183,7 +183,7 @@ class ShopCommand(dc.Extension):
 
     @dc.extension_component("shop_delete_id_select")
     async def shop_delete_id_select(self, ctx: dc.ComponentContext, values: list):
-        for shop_id in value:
+        for shop_id in values:
             shop_message = await ctx.channel.get_message(self.data["shops"][shop_id]["message_id"])
             await shop_message.delete()
             if not self.data["shops"][shop_id]["categorie"] in self.categories_excluded_from_limit:
@@ -204,14 +204,14 @@ class ShopCommand(dc.Extension):
                     custom_id="id",
                     label="ID (NICHT ÄNDERN!)",
                     value=shop_id,
-                    style=dc.TextInputStyle.SHORT,
+                    style=dc.TextStyleType.SHORT,
                     required=True
                 ),
                 dc.TextInput(
                     custom_id="name",
                     value=self.data["shops"][shop_id]["name"],
                     label="Name",
-                    style=dc.TextInputStyle.SHORT,
+                    style=dc.TextStyleType.SHORT,
                     placeholder="Name",
                     required=True,
                     max_length=50
@@ -245,23 +245,27 @@ class ShopCommand(dc.Extension):
                 )
             ]
         )
-        ctx.popup(shop_modal)
+        await ctx.popup(shop_modal)
 
     @dc.extension_modal("shop_edit_modal")
     async def shop_edit_modal(self, ctx: dc.ComponentContext, id: str, name: str, offer: str, location: str, dm_description: str):
         if id in self.data["shops"]:
             shop_message = await ctx.channel.get_message(self.data["shops"][id]["message_id"])
-            shop_embed = shop_message.embeds[0]
-            #TODO Make a regex to replace all this... Yay...
+            shop_embed: dc.Embed = shop_message.embeds[0]
+            shop_embed.set_field_at(0, name="Name", value=name, inline=False)
+            shop_embed.set_field_at(
+                1, name="Angebot", value=offer, inline=False)
+            shop_embed.set_field_at(
+                2, name="Ort", value=location, inline=False)
+            shop_message = await shop_message.edit(embeds=shop_embed)
             self.data["shops"][id]["name"] = name
             self.data["shops"][id]["offer"] = offer
             self.data["shops"][id]["location"] = location
             self.data["shops"][id]["dm_description"] = dm_description
             self.save_data()
-            await ctx.edit("Dein Shop wurde erfolgreich bearbeitet!", components=[])
+            await ctx.send("Dein Shop wurde erfolgreich bearbeitet!", ephemeral=True)
         else:
             await ctx.edit("Du hast die ID verändert... Warum bist du so?")
-        
 
     @dc.extension_component("categorie_select")
     @dc.autodefer()
@@ -340,16 +344,15 @@ class ShopCommand(dc.Extension):
         }
         shop_embed = dc.Embed(
             title=name,
-            description=f"""|| {self.transfer_data[identifier]["categorie"]} ||\n
-            **Angebot:**
-            {offer}\n
-            **Wo:**
-            {location}\n
-            **Besitzer:** {ctx.author.user.username}\n\
-            Shop nicht genehmigt :x: """,
+            description=f"""|| {self.transfer_data[identifier]["categorie"]} ||\n""",
             color=0xdaa520,
             footer=dc.EmbedFooter(text=identifier)
         )
+        shop_embed.add_field(name="Angebot", value=offer, inline=False)
+        shop_embed.add_field(name="Wo", value=location, inline=False)
+        shop_embed.add_field(
+            name="Besitzer", value=ctx.author.user.username, inline=False)
+        shop_embed.add_field(name="Genehmigt", value=":x:", inline=False)
         sent_message = await ctx.channel.send(embeds=shop_embed)
         self.data["shops"][identifier]["message_id"] = str(sent_message.id)
         if not self.transfer_data[identifier]["categorie"] in self.categories_excluded_from_limit:
