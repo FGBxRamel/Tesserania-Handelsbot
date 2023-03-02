@@ -463,7 +463,7 @@ class ShopCommand(dc.Extension):
                     inline=False
                 )
         await ctx.author.send(embeds=[shops_embed])
-        await ctx.edit("", components=[])
+        await ctx.edit("Bitte schaue in deine DMs!", components=[])
 
 
 def setup(client):
