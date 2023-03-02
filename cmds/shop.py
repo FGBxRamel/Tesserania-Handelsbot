@@ -130,25 +130,11 @@ class ShopCommand(dc.Extension):
                         value="delete"
                     )
                 ]
-            ),
-            dc.Option(
-                name="id",
-                description="Die ID des Shops, den du bearbeiten oder löschen möchtest.",
-                type=dc.OptionType.INTEGER,
-                required=False,
-                min_value=1000,
-                max_value=9999
             )
+
         ]
     )
     async def shop(self, ctx: dc.CommandContext, aktion: str, id: str = None):
-        if id:
-            try:
-                int(id)
-                id = str(id)
-            except ValueError:
-                await ctx.send("Die ID hat ein fehlerhaftes Format!", ephemeral=True)
-                return
         if aktion == "create":
             identifier = str(randint(1000, 9999))
             while identifier in self.data["shops"] or identifier in self.transfer_data:
@@ -160,7 +146,6 @@ class ShopCommand(dc.Extension):
             Bitte wähle eine Kategorie:""", components=[row1, row2], ephemeral=True)
             self.transfer_data[identifier]["message_id"] = sent_message.id
         elif aktion == "edit":
-            await ctx.send("Dieser Command ist noch nicht verfügbar.", ephemeral=True)
             shop_ids_select_options = self.get_shop_ids_select_options(
                 str(ctx.user.id), ctx.member.roles)
             shop_ids_selectmenu = dc.SelectMenu(
@@ -181,7 +166,7 @@ class ShopCommand(dc.Extension):
             )
             await ctx.send("Bitte wähle einen Shop aus, den du löschen möchtest:", components=shop_ids_selectmenu, ephemeral=True)
 
-    @dc.extension_component("shop_delete_id_select")
+    @ dc.extension_component("shop_delete_id_select")
     async def shop_delete_id_select(self, ctx: dc.ComponentContext, values: list):
         for shop_id in values:
             shop_message = await ctx.channel.get_message(self.data["shops"][shop_id]["message_id"])
@@ -192,7 +177,7 @@ class ShopCommand(dc.Extension):
         self.save_data()
         await ctx.edit("Die Shops wurden gelöscht.", components=[])
 
-    @dc.extension_component("shop_edit_id_select")
+    @ dc.extension_component("shop_edit_id_select")
     async def shop_edit_id_select(self, ctx: dc.ComponentContext, value: list):
         shop_id = value[0]
         shop_modal = dc.Modal(
@@ -247,7 +232,7 @@ class ShopCommand(dc.Extension):
         )
         await ctx.popup(shop_modal)
 
-    @dc.extension_modal("shop_edit_modal")
+    @ dc.extension_modal("shop_edit_modal")
     async def shop_edit_modal(self, ctx: dc.ComponentContext, id: str, name: str, offer: str, location: str, dm_description: str):
         if id in self.data["shops"]:
             shop_message = await ctx.channel.get_message(self.data["shops"][id]["message_id"])
@@ -267,8 +252,8 @@ class ShopCommand(dc.Extension):
         else:
             await ctx.edit("Du hast die ID verändert... Warum bist du so?")
 
-    @dc.extension_component("categorie_select")
-    @dc.autodefer()
+    @ dc.extension_component("categorie_select")
+    @ dc.autodefer()
     async def categorie_select(self, ctx: dc.ComponentContext, value: list):
         shop_message = ctx.message.content
         identifier = re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1)
@@ -329,7 +314,7 @@ class ShopCommand(dc.Extension):
         )
         await ctx.popup(shop_create_modal)
 
-    @dc.extension_modal("shop_create")
+    @ dc.extension_modal("shop_create")
     async def mod_shop_create(self, ctx: dc.CommandContext, name: str, offer: str, location: str, dm_description: str):
         shop_message = ctx.message.content
         identifier = re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1)
@@ -360,6 +345,92 @@ class ShopCommand(dc.Extension):
         self.save_data()
         del self.transfer_data[identifier]
         await ctx.send("Shop erstellt.", ephemeral=True)
+
+    # TODO Transfer this into an admin command
+    @dc.extension_command(
+        name="shop_admin",
+        description="Admin-Commands für Shops",
+        options=[
+            dc.Option(
+                name="aktion",
+                description="Was soll gemacht werden?",
+                required=True,
+                type=dc.OptionType.STRING,
+                choices=[
+                    dc.Choice(name="genehmigen", value="approve"),
+                    dc.Choice(name="ablehnen", value="deny"),
+                ]
+            )
+        ]
+    )
+    @dc.autodefer(ephemeral=True)
+    async def shop_admin(self, ctx: dc.CommandContext, aktion: str):
+        if aktion == "approve":
+            options = []
+            for shop in self.data["shops"]:
+                if not self.data["shops"][shop]["approved"]:
+                    options.append(dc.SelectOption(
+                        label=shop,
+                        description=self.data["shops"][shop]["name"],
+                        value=shop
+                    ))
+            if len(options) == 0:
+                await ctx.send("Es gibt keine Shops, die noch nicht genehmigt wurden.", ephemeral=True)
+                return
+            shop_approve_select_menu = dc.SelectMenu(
+                custom_id="shop_approve_id_select",
+                placeholder="Wähle die Shops aus die du genehmigen möchtest.",
+                min_values=1,
+                max_values=len(options),
+                options=options
+            )
+            await ctx.send(components=[shop_approve_select_menu], ephemeral=True)
+        elif aktion == "deny":
+            options = []
+            for shop in self.data["shops"]:
+                if self.data["shops"][shop]["approved"]:
+                    options.append(dc.SelectOption(
+                        label=shop,
+                        description=self.data["shops"][shop]["name"],
+                        value=shop
+                    ))
+            if len(options) == 0:
+                await ctx.send("Es gibt keine Shops, die genehmigt wurden.", ephemeral=True)
+                return
+            shop_deny_select_menu = dc.SelectMenu(
+                custom_id="shop_deny_id_select",
+                placeholder="Wähle die Shops aus die du ablehnen möchtest.",
+                min_values=1,
+                max_values=len(options),
+                options=options
+            )
+            await ctx.send(components=[shop_deny_select_menu], ephemeral=True)
+
+    @ dc.extension_component("shop_approve_id_select")
+    @dc.autodefer(ephemeral=True)
+    async def shop_approve_id_select(self, ctx: dc.ComponentContext, value: list):
+        for shop in value:
+            self.data["shops"][shop]["approved"] = True
+            shop_message = await ctx.channel.get_message(int(self.data["shops"][shop]["message_id"]))
+            shop_embed = shop_message.embeds[0]
+            shop_embed.set_field_at(
+                3, name="Genehmigt", value=":white_check_mark:", inline=False)
+            await shop_message.edit(embeds=[shop_embed])
+        self.save_data()
+        await ctx.send("Shop(s) genehmigt.", ephemeral=True)
+
+    @ dc.extension_component("shop_deny_id_select")
+    @dc.autodefer(ephemeral=True)
+    async def shop_deny_id_select(self, ctx: dc.ComponentContext, value: list):
+        for shop in value:
+            self.data["shops"][shop]["approved"] = False
+            shop_message = await ctx.channel.get_message(int(self.data["shops"][shop]["message_id"]))
+            shop_embed = shop_message.embeds[0]
+            shop_embed.set_field_at(
+                3, name="Genehmigt", value=":x:", inline=False)
+            await shop_message.edit(embeds=[shop_embed])
+        self.save_data()
+        await ctx.send("Shop(s) abgelehnt.", ephemeral=True)
 
 
 def setup(client):
