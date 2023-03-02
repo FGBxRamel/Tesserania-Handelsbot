@@ -128,6 +128,10 @@ class ShopCommand(dc.Extension):
                     dc.Choice(
                         name="löschen",
                         value="delete"
+                    ),
+                    dc.Choice(
+                        name="durchsuchen",
+                        value="search"
                     )
                 ]
             )
@@ -165,6 +169,17 @@ class ShopCommand(dc.Extension):
                 max_values=self.count_limit
             )
             await ctx.send("Bitte wähle einen Shop aus, den du löschen möchtest:", components=shop_ids_selectmenu, ephemeral=True)
+        elif aktion == "search":
+            options = [dc.SelectOption(label=category, value=category)
+                       for category in self.categories]
+            category_selectmenu = dc.SelectMenu(
+                custom_id="shop_search_category_select",
+                placeholder="Kategorie",
+                options=options,
+                min_values=1,
+                max_values=len(options)
+            )
+            await ctx.send("Bitte wähle eine Kategorie aus, nach der du suchen möchtest:", components=category_selectmenu, ephemeral=True)
 
     @ dc.extension_component("shop_delete_id_select")
     async def shop_delete_id_select(self, ctx: dc.ComponentContext, values: list):
@@ -329,7 +344,7 @@ class ShopCommand(dc.Extension):
         }
         shop_embed = dc.Embed(
             title=name,
-            description=f"""|| {self.transfer_data[identifier]["categorie"]} ||\n""",
+            description=f"""|| *{self.transfer_data[identifier]["categorie"]}* ||\n""",
             color=0xdaa520,
             footer=dc.EmbedFooter(text=identifier)
         )
@@ -431,6 +446,24 @@ class ShopCommand(dc.Extension):
             await shop_message.edit(embeds=[shop_embed])
         self.save_data()
         await ctx.send("Shop(s) abgelehnt.", ephemeral=True)
+
+    @dc.extension_component("shop_search_category_select")
+    @dc.autodefer(ephemeral=True)
+    async def shop_search_category_select(self, ctx: dc.ComponentContext, value: str):
+        shops_embed = dc.Embed(
+            title="Shops",
+            description="Hier findest du alle Shops die den Kategorien entsprechen.",
+            color=0xdaa520
+        )
+        for shop in self.data["shops"]:
+            if self.data["shops"][shop]["categorie"] in value and self.data["shops"][shop]["approved"]:
+                shops_embed.add_field(
+                    name=self.data["shops"][shop]["name"],
+                    value=f"""|| *{self.data["shops"][shop]["categorie"]}* ||\n{self.data["shops"][shop]["dm_description"]}""",
+                    inline=False
+                )
+        await ctx.author.send(embeds=[shops_embed])
+        await ctx.edit("", components=[])
 
 
 def setup(client):
