@@ -1,9 +1,9 @@
 import configparser as cp
 import json
+import sys
 from os import makedirs, path
-from time import sleep, strftime, time, localtime
 from random import randint
-from sys import exit
+from time import localtime, sleep, strftime, time
 
 import interactions as dc
 
@@ -62,7 +62,7 @@ class VotingCommand(dc.Extension):
                 data_file_content = data_file.read()
                 print(
                     f"data.json could not be loaded! It probably is empty.\n{data_file_content}")
-                exit()
+                sys.exit()
         with open("data.json", "w") as data_file:
             # Do it so the main file knows where the votings are stored
             transfer_data["voting"] = {
@@ -70,7 +70,7 @@ class VotingCommand(dc.Extension):
             }
             json.dump(transfer_data, data_file, indent=4)
 
-    def user_is_privileged(self, roles: list) -> bool:
+    def user_is_privileged(self, roles: list[int]) -> bool:
         return any(role in self.privileged_roles_ids for role in roles)
 
     @staticmethod
@@ -124,7 +124,6 @@ class VotingCommand(dc.Extension):
                 description="Die ID des Shops, den du bearbeiten möchtest.",
                 type=dc.OptionType.INTEGER,
                 required=False,
-                min_value=1000,
                 max_value=9999
             )
         ]
@@ -199,22 +198,22 @@ class VotingCommand(dc.Extension):
             )
             await ctx.popup(edit_voting_modal)
         elif aktion == "close":
-            close_modal = dc.Modal(
-                title="Abstimmung beenden",
-                custom_id="mod_close_voting",
-                components=[
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
-                        label="ID der Abstimmung",
-                        custom_id="close_voting_id",
-                        required=True,
-                        min_length=4,
-                        max_length=4,
-                        value=str(id) if id else "0000"
+            close_options = []
+            for voting_id, voting_data in self.data.items():
+                if voting_data["user_id"] == str(ctx.author.id) or self.user_is_privileged(ctx.author.roles):
+                    close_options.append(
+                        dc.SelectOption(
+                            label=voting_id,
+                            value=voting_id
+                        )
                     )
-                ]
+            close_menu = dc.SelectMenu(
+                custom_id="close_voting_menu",
+                placeholder="Wähle eine Abstimmung aus",
+                options=close_options,
+                max_values=len(close_options)
             )
-            await ctx.popup(close_modal)
+            await ctx.send("Wähle eine Abstimmung aus, die du beenden möchtest.", components=close_menu, ephemeral=True)
 
     @dc.extension_modal("mod_create_voting")
     async def create_voting_response(self, ctx: dc.CommandContext, text: str, count: str, deadline: str):
@@ -365,6 +364,23 @@ class VotingCommand(dc.Extension):
         del self.data[id]
         self.save_data()
         await ctx.send("Die Abstimmung wurde beendet.", ephemeral=True)
+
+    @dc.extension_component("close_voting_menu")
+    async def close_voting(self, ctx: dc.CommandContext, ids: list):
+        await ctx.defer()
+        self.load_data()
+        for id in ids:
+            votings_channel: dc.Channel = await ctx.get_channel()
+            voting_message: dc.Message = await votings_channel.get_message(self.data[id]["message_id"])
+            message_embed: dc.Embed = self.evaluate_voting(voting_message)
+            current_time_formatted = strftime("%d.%m. %H:%M")
+            message_embed.description = "**Diese Abstimmung wurde vorzeitig beendet!**\n" \
+                + f"{ctx.user.username}, {current_time_formatted}" \
+                + "\n\n" + message_embed.description
+            await voting_message.edit(embeds=message_embed)
+            del self.data[id]
+            self.save_data()
+        await ctx.edit("Die Abstimmungen wurden beendet.", ephemeral=True)
 
 
 def setup(client):
