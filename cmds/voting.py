@@ -367,7 +367,7 @@ class VotingCommand(dc.Extension):
 
     @dc.extension_component("close_voting_menu")
     async def close_voting(self, ctx: dc.CommandContext, ids: list):
-        await ctx.defer()
+        await ctx.defer(ephemeral=True)
         self.load_data()
         for id in ids:
             votings_channel: dc.Channel = await ctx.get_channel()
@@ -380,7 +380,7 @@ class VotingCommand(dc.Extension):
             await voting_message.edit(embeds=message_embed)
             del self.data[id]
         self.save_data()
-        await ctx.edit("Die Abstimmungen wurden beendet.", ephemeral=True)
+        await ctx.edit("Die Abstimmungen wurden beendet.", components=[])
 
 
 def setup(client):
