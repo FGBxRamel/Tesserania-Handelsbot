@@ -155,7 +155,6 @@ class OfferCommand(dc.Extension):
                 custom_id="delete_offer_menu",
                 placeholder="Wähle ein Angebot aus",
                 options=offer_options,
-                min_values=1,
                 max_values=3
             )
             await ctx.send("Wähle die Angebote aus, die du löschen möchtest.", components=delete_selectmenu, ephemeral=True)
@@ -186,7 +185,7 @@ class OfferCommand(dc.Extension):
                             required=True,
                             min_length=4,
                             max_length=4,
-                            value=str(id) if id else ""
+                            value=str(id) if id else "0000"
                         )
                     ]
                 )
