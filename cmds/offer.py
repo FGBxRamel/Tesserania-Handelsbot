@@ -149,7 +149,6 @@ class OfferCommand(dc.Extension):
             if len(offer_options) == 0:
                 await ctx.send("Du hast keine Angebote, die du löschen kannst.", ephemeral=True)
                 return
-            print(offer_options)
             delete_selectmenu = dc.SelectMenu(
                 custom_id="delete_offer_menu",
                 placeholder="Wähle ein Angebot aus",

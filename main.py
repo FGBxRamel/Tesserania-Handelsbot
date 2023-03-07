@@ -70,7 +70,6 @@ def evaluate_voting(message: dc.Message) -> str:
 async def automatic_delete(oneshot: bool = False) -> None:
     if not oneshot:
         bot._loop.call_later(86400, run_delete)
-    print("Started automatic_delete task")
     offer_channel: dc.Channel = await dc.get(bot, dc.Channel, object_id=offer_channel_id)
     voting_channel: dc.Channel = await dc.get(bot, dc.Channel, object_id=voting_channel_id)
     current_time = time()
