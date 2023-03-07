@@ -3,6 +3,7 @@ import json
 from os import makedirs, path
 from time import sleep, strftime, time, localtime
 from random import randint
+from sys import exit
 
 import interactions as dc
 
