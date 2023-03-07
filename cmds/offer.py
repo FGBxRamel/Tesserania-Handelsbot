@@ -92,16 +92,10 @@ class OfferCommand(dc.Extension):
                         value="edit"
                     )
                 ]
-            ),
-            dc.Option(
-                name="id",
-                description="Die ID des Angebots.",
-                type=dc.OptionType.INTEGER,
-                required=False
             )
         ]
     )
-    async def offer(self, ctx: dc.CommandContext, aktion: str, id: int = None):
+    async def offer(self, ctx: dc.CommandContext, aktion: str):
         if aktion == "create":
             if not str(ctx.author.id) in self.data["count"]:
                 self.data["count"][str(ctx.author.id)] = 0
@@ -165,40 +159,26 @@ class OfferCommand(dc.Extension):
             )
             await ctx.send("Wähle die Angebote aus, die du löschen möchtest.", components=delete_selectmenu, ephemeral=True)
         elif aktion == "edit":
-            try:
-                edit_id_modal = dc.Modal(
-                    title="Angebot bearbeiten",
-                    custom_id="mod_edit_offer",
-                    components=[
-                        dc.TextInput(
-                            style=dc.TextStyleType.SHORT,
-                            label="Titel",
-                            custom_id="edit_offer_title",
-                            value=self.data["offers"][str(
-                                id)]["title"] if id else ""
-                        ),
-                        dc.TextInput(
-                            style=dc.TextStyleType.PARAGRAPH,
-                            label="Angebotstext",
-                            custom_id="edit_offer_text",
-                            value=self.data["offers"][str(
-                                id)]["text"] if id else ""
-                        ),
-                        dc.TextInput(
-                            style=dc.TextStyleType.SHORT,
-                            label="ID des Angebots",
-                            custom_id="edit_offer_id",
-                            required=True,
-                            min_length=4,
-                            max_length=4,
-                            value=str(id) if id else "0000"
-                        )
-                    ]
+            offer_options = []
+            for offer_id, offer_data in self.data["offers"].items():
+                offer_options.append(
+                    dc.SelectOption(
+                        label=offer_id,
+                        value=offer_id,
+                        description=offer_data["title"]
+                    )
                 )
-            except KeyError:
-                await ctx.send("Das Angebot existiert nicht.", ephemeral=True)
+            if len(offer_options) == 0:
+                await ctx.send("Es gibt keine Angebote, die du bearbeiten kannst.", ephemeral=True)
                 return
-            await ctx.popup(edit_id_modal)
+            edit_selectmenu = dc.SelectMenu(
+                custom_id="edit_offer_menu",
+                placeholder="Wähle ein Angebot aus",
+                options=offer_options,
+                min_values=1,
+                max_values=1
+            )
+            await ctx.send("Wähle das Angebot aus, das du bearbeiten möchtest.", components=edit_selectmenu, ephemeral=True)
 
     @dc.extension_modal("mod_create_offer")
     async def create_offer_respone(self, ctx: dc.CommandContext, title: str, price: str, offer_text: str, deadline: str):
@@ -250,6 +230,39 @@ class OfferCommand(dc.Extension):
         self.save_data()
         await ctx.send("Die Angebote wurden gelöscht.", ephemeral=True)
 
+    @dc.extension_component("edit_offer_menu")
+    async def edit_offer_response(self, ctx: dc.CommandContext, ids: list):
+        edit_modal = dc.Modal(
+            title="Angebot bearbeiten",
+            custom_id="mod_edit_offer",
+            description="Bearbeite das Angebot",
+            components=[
+                dc.TextInput(
+                    style=dc.TextStyleType.SHORT,
+                    label="Titel",
+                    custom_id="edit_offer_title",
+                    required=True,
+                    value=self.data["offers"][ids[0]]["title"]
+                ),
+                dc.TextInput(
+                    style=dc.TextStyleType.PARAGRAPH,
+                    label="Text",
+                    custom_id="edit_offer_text",
+                    required=True,
+                    value=self.data["offers"][ids[0]]["text"]
+                ),
+                dc.TextInput(
+                    style=dc.TextStyleType.SHORT,
+                    label="ID",
+                    custom_id="edit_offer_id",
+                    required=True,
+                    max_length=4,
+                    value=ids[0]
+                )
+            ]
+        )
+        await ctx.popup(edit_modal)
+
     @dc.extension_modal("mod_edit_offer")
     async def edit_offer_id(self, ctx: dc.CommandContext, title: str, text: str, id: str = ""):
         try:
@@ -268,21 +281,16 @@ class OfferCommand(dc.Extension):
             await ctx.send("Du bist nicht berechtigt dieses Angebot zu bearbeiten!",
                            ephemeral=True)
             return
+        self.data["offers"][id]["title"] = title
+        self.data["offers"][id]["text"] = text
         offer_channel: dc.Channel = await ctx.get_channel()
         offer_message: dc.Message = await offer_channel.get_message(self.data["offers"][id]["message_id"])
         message_embed: dc.Embed = offer_message.embeds[0]
-        if type(title) is None or title == " ":
-            title = message_embed.title
-        if type(text) is None or text == " ":
-            text = message_embed.description + "\n*bearbeitet*"
-        else:
-            text = f"{text}\n**Preis:** {self.data['offers'][id]['price']}\n*bearbeitet*"
+        text = f"{text}\n**Preis:** {self.data['offers'][id]['price']}\n*bearbeitet*"
         message_embed.title = title
         message_embed.description = text
-        self.data["offers"][id]["title"] = title
-        self.data["offers"][id]["text"] = text
-        self.save_data()
         await offer_message.edit(embeds=message_embed)
+        self.save_data()
         await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
 
