@@ -184,7 +184,7 @@ class VotingCommand(dc.Extension):
                         required=True,
                         min_length=4,
                         max_length=4,
-                        value=str(id) if id else ""
+                        value=str(id) if id else "0000"
                     ),
                     dc.TextInput(
                         style=dc.TextStyleType.PARAGRAPH,
@@ -207,7 +207,7 @@ class VotingCommand(dc.Extension):
                         required=True,
                         min_length=4,
                         max_length=4,
-                        value=str(id) if id else ""
+                        value=str(id) if id else "0000"
                     )
                 ]
             )
