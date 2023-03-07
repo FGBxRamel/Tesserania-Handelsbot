@@ -126,7 +126,6 @@ async def check_votings():
                 bot._loop.call_later(
                     value_list["wait_time"] - (time() - value_list["create_time"]), partial(run_delete, oneshot=True))
                 votings_timer_started.add(id)
-        print("Started check_votings task")
         await asyncio.sleep(30)
 
 
