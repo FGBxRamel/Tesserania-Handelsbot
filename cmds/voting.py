@@ -379,7 +379,7 @@ class VotingCommand(dc.Extension):
                 + "\n\n" + message_embed.description
             await voting_message.edit(embeds=message_embed)
             del self.data[id]
-            self.save_data()
+        self.save_data()
         await ctx.edit("Die Abstimmungen wurden beendet.", ephemeral=True)
 
 
