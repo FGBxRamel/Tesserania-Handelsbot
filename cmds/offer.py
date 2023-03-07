@@ -197,7 +197,6 @@ class OfferCommand(dc.Extension):
 
     @dc.extension_modal("mod_create_offer")
     async def create_offer_respone(self, ctx: dc.CommandContext, title: str, price: str, offer_text: str, deadline: str):
-        await ctx.send("Dein Angebot wird erstellt...", ephemeral=True)
         identifier = randint(1000, 9999)
         while identifier in self.data["offers"]:
             identifier = randint(1000, 9999)
