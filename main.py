@@ -54,7 +54,6 @@ votings_timer_started: set = set()
 
 def evaluate_voting(message: dc.Message) -> str:
     """Returns the message embed with the voting result appended."""
-    print("Evaluating voting")
     winner, winner_count = "", 0
     try:
         winner, winner_count = "", 0
@@ -93,8 +92,7 @@ async def automatic_delete(oneshot: bool = False) -> None:
     with open(data["voting"]["data_file"], "r") as voting_file:
         votings_data: dict = json.load(voting_file)
     for id, values in votings_data.items():
-        print(values)
-        if values["deadline"] <= current_time:
+        if int(values["deadline"]) <= int(current_time):
             message: dc.Message = await voting_channel.get_message(int(values["message_id"]))
             message_embed = evaluate_voting(message)
             await message.edit(embeds=message_embed)
@@ -120,7 +118,6 @@ def run_delete(oneshot: bool = False):
 # Call bot._loop.call_later(wait_time - (localtime - create time), run_delete, oneshot=True)
 # Add voting ID to list so there's no duplicate timers
 async def check_votings():
-    # TODO Votings not working
     while True:
         with open(data["voting"]["data_file"], "r") as data_file:
             votings: dict = json.load(data_file)
