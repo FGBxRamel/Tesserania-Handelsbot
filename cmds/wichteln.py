@@ -15,6 +15,7 @@ class WichtelCommand(dc.Extension):
         self.data_folder_path = 'data/wichteln/'
         self.data_file_path = self.data_folder_path + 'wichteln.json'
         self.wichtel_text_file_path = self.data_folder_path + 'wichteln.txt'
+        self.data = {}
         self.refresh_config()
         self.load_data()
 

@@ -14,6 +14,7 @@ class OfferCommand(dc.Extension):
         self.client = client
         self.data_folder_path = 'data/offer/'
         self.data_file_path = self.data_folder_path + 'offer.json'
+        self.data = {}
         self.refresh_config()
         self.setup_data()
 
@@ -142,12 +143,12 @@ class OfferCommand(dc.Extension):
         elif aktion == "delete":
             offer_options = []
             priviledged = self.user_is_privileged(ctx.author.roles)
-            for id, offer_data in self.data["offers"].items():
+            for offer_id, offer_data in self.data["offers"].items():
                 if offer_data["user_id"] == str(ctx.author.id) or priviledged:
                     offer_options.append(
                         dc.SelectOption(
-                            label=id,
-                            value=id,
+                            label=offer_id,
+                            value=offer_id,
                             description=offer_data["title"]
                         )
                     )

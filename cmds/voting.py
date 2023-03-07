@@ -16,6 +16,7 @@ class VotingCommand(dc.Extension):
         self.data_file_path = self.data_folder_path + 'voting.json'
         self.emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA",
                             "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
+        self.data = {}
         self.refresh_config()
         self.setup_data()
 
@@ -71,7 +72,8 @@ class VotingCommand(dc.Extension):
     def user_is_privileged(self, roles: list) -> bool:
         return any(role in self.privileged_roles_ids for role in roles)
 
-    def evaluate_voting(self, message: dc.Message) -> str:
+    @staticmethod
+    def evaluate_voting(message: dc.Message) -> str:
         """Returns the message embed with the voting result appended."""
         winner, winner_count = "", 0
         try:
@@ -158,12 +160,12 @@ class VotingCommand(dc.Extension):
             await ctx.popup(create_voting_modal)
         elif aktion == "delete":
             voting_options = []
-            for id, voting_data in self.data.items():
+            for voting_id, voting_data in self.data.items():
                 if voting_data["user_id"] == str(ctx.author.id):
                     voting_options.append(
                         dc.SelectOption(
-                            label=id,
-                            value=id
+                            label=voting_id,
+                            value=voting_id
                         )
                     )
             delete_selectmenu = dc.SelectMenu(
@@ -257,7 +259,6 @@ class VotingCommand(dc.Extension):
             "deadline": end_time
         }
 
-        wait_time = end_time - time()
         end_time = strftime("%d.%m.") + "- " + \
             strftime("%d.%m. %H:%M", localtime(int(end_time)))
 

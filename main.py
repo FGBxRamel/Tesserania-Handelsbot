@@ -1,10 +1,8 @@
+import asyncio
 import configparser as cp
 import json
-from random import randint, shuffle
-from time import localtime, mktime, sleep, strftime, strptime, time
-from os import mkdir, path
 from functools import partial
-import asyncio
+from time import mktime, strftime, strptime, time
 
 import interactions as dc
 
@@ -119,8 +117,8 @@ def run_delete(oneshot: bool = False):
 # Add voting ID to list so there's no duplicate timers
 async def check_votings():
     while True:
-        with open(data["voting"]["data_file"], "r") as data_file:
-            votings: dict = json.load(data_file)
+        with open(data["voting"]["data_file"], "r") as voting_data_file:
+            votings: dict = json.load(voting_data_file)
         for id, value_list in votings.items():
             if id not in votings_timer_started:
                 bot._loop.call_later(

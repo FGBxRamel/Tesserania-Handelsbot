@@ -16,6 +16,7 @@ class ShopCommand(dc.Extension):
         self.refresh_components()
         self.data_folder_path = "data/shop/"
         self.data_file_path = self.data_folder_path + "shop.json"
+        self.data = {}
         self.load_data()
 
     def refresh_config(self):
