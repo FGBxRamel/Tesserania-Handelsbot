@@ -71,7 +71,7 @@ class VotingCommand(dc.Extension):
     def user_is_privileged(self, roles: list) -> bool:
         return any(role in self.privileged_roles_ids for role in roles)
 
-    def evaluate_voting(message: dc.Message) -> str:
+    def evaluate_voting(self, message: dc.Message) -> str:
         """Returns the message embed with the voting result appended."""
         winner, winner_count = "", 0
         try:
