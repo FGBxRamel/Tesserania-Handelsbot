@@ -141,8 +141,8 @@ class OfferCommand(dc.Extension):
             )
             await ctx.popup(create_modal)
         elif aktion == "delete":
-            offer_options = []
             priviledged = self.user_is_privileged(ctx.author.roles)
+            offer_options = []
             for offer_id, offer_data in self.data["offers"].items():
                 if offer_data["user_id"] == str(ctx.author.id) or priviledged:
                     offer_options.append(
@@ -152,11 +152,16 @@ class OfferCommand(dc.Extension):
                             description=offer_data["title"]
                         )
                     )
+            if len(offer_options) == 0:
+                await ctx.send("Du hast keine Angebote, die du löschen kannst.", ephemeral=True)
+                return
+            print(offer_options)
             delete_selectmenu = dc.SelectMenu(
                 custom_id="delete_offer_menu",
                 placeholder="Wähle ein Angebot aus",
                 options=offer_options,
-                max_values=3
+                min_values=1,
+                max_values=len(offer_options)
             )
             await ctx.send("Wähle die Angebote aus, die du löschen möchtest.", components=delete_selectmenu, ephemeral=True)
         elif aktion == "edit":
@@ -233,13 +238,10 @@ class OfferCommand(dc.Extension):
         await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
 
     @dc.extension_component("delete_offer_menu")
-    @dc.autodefer(ephemeral=True)
     async def delete_offer_response(self, ctx: dc.CommandContext, ids: list):
+        await ctx.defer(ephemeral=True)
         offer_channel: dc.Channel = await ctx.get_channel()
         for id in ids:
-            if id not in self.data["offers"]:
-                await ctx.send(f"Die ID {id} existiert nicht!", ephemeral=True)
-                return
             offer_message: dc.Message = await offer_channel.get_message(self.data["offers"][id]["message_id"])
             await offer_message.delete(reason=f"[Manuell] {ctx.author.user.username}")
             del self.data["offers"][id]
