@@ -138,7 +138,7 @@ class ShopCommand(dc.Extension):
 
         ]
     )
-    async def shop(self, ctx: dc.CommandContext, aktion: str, id: str = None):
+    async def shop(self, ctx: dc.CommandContext, aktion: str):
         if aktion == "create":
             identifier = str(randint(1000, 9999))
             while identifier in self.data["shops"] or identifier in self.transfer_data:
