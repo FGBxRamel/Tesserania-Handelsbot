@@ -343,7 +343,7 @@ class VotingCommand(dc.Extension):
         await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
     @dc.extension_component("delete_voting_menu")
-    async def close_voting(self, ctx: dc.CommandContext, ids: list):
+    async def delete_voting(self, ctx: dc.CommandContext, ids: list):
         id = ids[0]
         self.load_data()
         if id not in self.data:
