@@ -167,7 +167,7 @@ class ShopCommand(dc.Extension):
                 placeholder="Shop-ID",
                 options=shop_ids_select_options,
                 min_values=1,
-                max_values=self.count_limit
+                max_values=len(shop_ids_select_options)
             )
             await ctx.send("Bitte wähle einen Shop aus, den du löschen möchtest:", components=shop_ids_selectmenu, ephemeral=True)
         elif aktion == "search":
