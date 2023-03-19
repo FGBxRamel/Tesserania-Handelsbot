@@ -128,9 +128,6 @@ dmypy.json
 # Pyre type checker
 .pyre/
 
-# VC Code
-.vscode/
-
 # Own
 data.json
 config.ini
