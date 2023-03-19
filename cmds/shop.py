@@ -151,8 +151,7 @@ class ShopCommand(dc.Extension):
             self.transfer_data[identifier] = {}
             row1 = dc.ActionRow(components=[self.categorie_selectmenu])
             row2 = dc.ActionRow(components=[self.abort_button])
-            sent_message = await ctx.send(f"""|| {identifier} ||
-            Bitte wähle eine Kategorie:""", components=[row1, row2], ephemeral=True)
+            sent_message = await ctx.send(f"{identifier}", components=[row1, row2], ephemeral=True)
             self.transfer_data[identifier]["message_id"] = sent_message.id
         elif aktion == "edit":
             shop_ids_select_options = self.get_shop_ids_select_options(
@@ -275,8 +274,7 @@ class ShopCommand(dc.Extension):
     @ dc.extension_component("categorie_select")
     async def categorie_select(self, ctx: dc.ComponentContext, value: list):
         await ctx.defer(ephemeral=True)
-        shop_message = ctx.message.content
-        identifier = re.match(r"(\d{4})", shop_message).group(1)
+        identifier = ctx.message.content
         if not str(ctx.author.id) in self.data["count"]:
             self.data["count"][str(ctx.author.id)] = 0
         elif not value[0] in self.categories_excluded_from_limit:
