@@ -269,8 +269,8 @@ class ShopCommand(dc.Extension):
             await ctx.edit("Du hast die ID verändert... Warum bist du so?")
 
     @ dc.extension_component("categorie_select")
-    @ dc.autodefer()
     async def categorie_select(self, ctx: dc.ComponentContext, value: list):
+        await ctx.defer(ephemeral=True)
         shop_message = ctx.message.content
         identifier = re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1)
         if not str(ctx.author.id) in self.data["count"]:
@@ -379,8 +379,8 @@ class ShopCommand(dc.Extension):
             )
         ]
     )
-    @dc.autodefer(ephemeral=True)
     async def shop_admin(self, ctx: dc.CommandContext, aktion: str):
+        await ctx.defer(ephemeral=True)
         if aktion == "approve":
             options = []
             for shop in self.data["shops"]:
@@ -423,8 +423,8 @@ class ShopCommand(dc.Extension):
             await ctx.send(components=[shop_deny_select_menu], ephemeral=True)
 
     @ dc.extension_component("shop_approve_id_select")
-    @dc.autodefer(ephemeral=True)
     async def shop_approve_id_select(self, ctx: dc.ComponentContext, value: list):
+        await ctx.defer(ephemeral=True)
         for shop in value:
             self.data["shops"][shop]["approved"] = True
             shop_message = await ctx.channel.get_message(int(self.data["shops"][shop]["message_id"]))
@@ -436,8 +436,8 @@ class ShopCommand(dc.Extension):
         await ctx.send("Shop(s) genehmigt.", ephemeral=True)
 
     @ dc.extension_component("shop_deny_id_select")
-    @dc.autodefer(ephemeral=True)
     async def shop_deny_id_select(self, ctx: dc.ComponentContext, value: list):
+        await ctx.defer(ephemeral=True)
         for shop in value:
             self.data["shops"][shop]["approved"] = False
             shop_message = await ctx.channel.get_message(int(self.data["shops"][shop]["message_id"]))
@@ -449,8 +449,8 @@ class ShopCommand(dc.Extension):
         await ctx.send("Shop(s) abgelehnt.", ephemeral=True)
 
     @dc.extension_component("shop_search_category_select")
-    @dc.autodefer(ephemeral=True)
     async def shop_search_category_select(self, ctx: dc.ComponentContext, value: str):
+        await ctx.defer(ephemeral=True)
         shops_embed = dc.Embed(
             title="Shops",
             description="Hier findest du alle Shops die den Kategorien entsprechen.",
