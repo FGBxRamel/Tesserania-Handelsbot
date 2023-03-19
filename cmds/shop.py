@@ -25,8 +25,11 @@ class ShopCommand(dc.Extension):
             config.read_file(config_file)
             self.count_limit = config.getint('Shops', 'max_shops_per_person')
             self.categories = config.get('Shops', 'categories').split(',')
+            self.categories = [category.strip() for category in self.categories]
             self.categories_excluded_from_limit = config.get(
                 'Shops', 'categories_excluded_from_limit').split(",")
+            self.categories_excluded_from_limit = [
+                category.strip() for category in self.categories_excluded_from_limit]
         global scope_ids
         scope_ids = config.get('IDs', 'server').split(',')
         self.transfer_data = {}
