@@ -25,7 +25,8 @@ class ShopCommand(dc.Extension):
             config.read_file(config_file)
             self.count_limit = config.getint('Shops', 'max_shops_per_person')
             self.categories = config.get('Shops', 'categories').split(',')
-            self.categories = [category.strip() for category in self.categories]
+            self.categories = [category.strip()
+                               for category in self.categories]
             self.categories_excluded_from_limit = config.get(
                 'Shops', 'categories_excluded_from_limit').split(",")
             self.categories_excluded_from_limit = [
