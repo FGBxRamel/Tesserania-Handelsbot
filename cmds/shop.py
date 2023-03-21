@@ -1,7 +1,6 @@
 import configparser as cp
 import json
-import re
-from os import path, makedirs
+from os import makedirs, path
 from random import randint
 
 import interactions as dc
@@ -101,9 +100,7 @@ class ShopCommand(dc.Extension):
 
     @dc.extension_component("shop_abort")
     async def shop_abort(self, ctx: dc.ComponentContext):
-        shop_message_text = ctx.message.content
-        identifier = int(
-            re.match(r"\|\| (\d{4}) \|\|", shop_message_text).group(1))
+        identifier = int(ctx.message.content)
         try:
             del self.transfer_data[identifier]
         except KeyError:
@@ -151,8 +148,7 @@ class ShopCommand(dc.Extension):
             self.transfer_data[identifier] = {}
             row1 = dc.ActionRow(components=[self.categorie_selectmenu])
             row2 = dc.ActionRow(components=[self.abort_button])
-            sent_message = await ctx.send(f"""|| {identifier} ||
-            Bitte wähle eine Kategorie:""", components=[row1, row2], ephemeral=True)
+            sent_message = await ctx.send(f"{identifier}", components=[row1, row2], ephemeral=True)
             self.transfer_data[identifier]["message_id"] = sent_message.id
         elif aktion == "edit":
             shop_ids_select_options = self.get_shop_ids_select_options(
@@ -275,8 +271,7 @@ class ShopCommand(dc.Extension):
     @ dc.extension_component("categorie_select")
     async def categorie_select(self, ctx: dc.ComponentContext, value: list):
         await ctx.defer(ephemeral=True)
-        shop_message = ctx.message.content
-        identifier = re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1)
+        identifier = int(ctx.message.content)
         if not str(ctx.author.id) in self.data["count"]:
             self.data["count"][str(ctx.author.id)] = 0
         elif not value[0] in self.categories_excluded_from_limit:
@@ -336,8 +331,7 @@ class ShopCommand(dc.Extension):
 
     @ dc.extension_modal("shop_create")
     async def mod_shop_create(self, ctx: dc.CommandContext, name: str, offer: str, location: str, dm_description: str):
-        shop_message = ctx.message.content
-        identifier = re.match(r"\|\| (\d{4}) \|\|", shop_message).group(1)
+        identifier = int(ctx.message.content)
         self.data["shops"][identifier] = {
             "name": name,
             "offer": offer,
