@@ -159,6 +159,9 @@ class ShopCommand(dc.Extension):
         elif aktion == "delete":
             shop_ids_select_options = self.get_shop_ids_select_options(
                 str(ctx.user.id), ctx.member.roles)
+            if len(shop_ids_select_options) == 0:
+                await ctx.send("Du hast keine Shops, die du löschen könntest!", ephemeral=True)
+                return
             shop_ids_selectmenu = dc.SelectMenu(
                 custom_id="shop_delete_id_select",
                 placeholder="Shop-ID",
