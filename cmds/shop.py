@@ -100,9 +100,8 @@ class ShopCommand(dc.Extension):
 
     @dc.extension_component("shop_abort")
     async def shop_abort(self, ctx: dc.ComponentContext):
-        identifier = int(ctx.message.content)
         try:
-            del self.transfer_data[identifier]
+            del self.transfer_data[int(ctx.author.id)]
         except KeyError:
             await ctx.edit("Es gibt keine aktive Shop-Erstellung. Bitte benutze keine Nachricht zweimal!", components=[])
             return
@@ -142,14 +141,12 @@ class ShopCommand(dc.Extension):
     )
     async def shop(self, ctx: dc.CommandContext, aktion: str):
         if aktion == "create":
-            identifier = str(randint(1000, 9999))
-            while identifier in self.data["shops"] or identifier in self.transfer_data:
-                identifier = str(randint(1000, 9999))
-            self.transfer_data[identifier] = {}
+            self.transfer_data[int(ctx.author.id)] = {}
             row1 = dc.ActionRow(components=[self.categorie_selectmenu])
             row2 = dc.ActionRow(components=[self.abort_button])
-            sent_message = await ctx.send(f"{identifier}", components=[row1, row2], ephemeral=True)
-            self.transfer_data[identifier]["message_id"] = sent_message.id
+            sent_message = await ctx.send(components=[row1, row2], ephemeral=True)
+            self.transfer_data[int(ctx.author.id)]["message_id"] = int(
+                sent_message.id)
         elif aktion == "edit":
             shop_ids_select_options = self.get_shop_ids_select_options(
                 str(ctx.user.id), ctx.member.roles)
@@ -270,21 +267,19 @@ class ShopCommand(dc.Extension):
 
     @ dc.extension_component("categorie_select")
     async def categorie_select(self, ctx: dc.ComponentContext, value: list):
-        await ctx.defer(ephemeral=True)
-        identifier = int(ctx.message.content)
         if not str(ctx.author.id) in self.data["count"]:
             self.data["count"][str(ctx.author.id)] = 0
         elif not value[0] in self.categories_excluded_from_limit:
             if self.data["count"][str(ctx.author.id)] >= self.count_limit:
                 try:
-                    del self.transfer_data[identifier]
+                    del self.transfer_data[int(ctx.author.id)]
                 except KeyError:
                     await ctx.edit("Ein Fehler ist aufgetreten. Bitte benutze eine Nachricht nicht zweimal!", components=[])
                     return
                 await ctx.edit("Du hast bereits die maximale Anzahl an Shops erreicht.", components=[])
                 return
         try:
-            self.transfer_data[identifier]["categorie"] = value[0]
+            self.transfer_data[int(ctx.author.id)]["categorie"] = value[0]
         except KeyError:
             await ctx.edit("Ein Fehler ist aufgetreten. Bitte benutze eine Nachricht nicht zweimal!", components=[])
             return
@@ -331,19 +326,21 @@ class ShopCommand(dc.Extension):
 
     @ dc.extension_modal("shop_create")
     async def mod_shop_create(self, ctx: dc.CommandContext, name: str, offer: str, location: str, dm_description: str):
-        identifier = int(ctx.message.content)
+        identifier = randint(1000, 9999)
+        while identifier in self.data["shops"]:
+            identifier = randint(1000, 9999)
         self.data["shops"][identifier] = {
             "name": name,
             "offer": offer,
             "location": location,
             "dm_description": dm_description,
-            "categorie": self.transfer_data[identifier]["categorie"],
+            "categorie": self.transfer_data[int(ctx.author.id)]["categorie"],
             "owner": str(ctx.author.id),
             "approved": False
         }
         shop_embed = dc.Embed(
             title=name,
-            description=f"""|| *{self.transfer_data[identifier]["categorie"]}* ||\n""",
+            description=f"""|| *{self.transfer_data[int(ctx.author.id)]["categorie"]}* ||\n""",
             color=0xdaa520,
             footer=dc.EmbedFooter(text=identifier)
         )
@@ -354,10 +351,10 @@ class ShopCommand(dc.Extension):
         shop_embed.add_field(name="Genehmigt", value=":x:", inline=False)
         sent_message = await ctx.channel.send(embeds=shop_embed)
         self.data["shops"][identifier]["message_id"] = str(sent_message.id)
-        if not self.transfer_data[identifier]["categorie"] in self.categories_excluded_from_limit:
+        if not self.transfer_data[int(ctx.author.id)]["categorie"] in self.categories_excluded_from_limit:
             self.data["count"][str(ctx.author.id)] += 1
         self.save_data()
-        del self.transfer_data[identifier]
+        del self.transfer_data[int(ctx.author.id)]
         await ctx.send("Shop erstellt.", ephemeral=True)
 
     # TODO Transfer this into an admin command
