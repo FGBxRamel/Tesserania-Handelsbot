@@ -326,9 +326,9 @@ class ShopCommand(dc.Extension):
 
     @ dc.extension_modal("shop_create")
     async def mod_shop_create(self, ctx: dc.CommandContext, name: str, offer: str, location: str, dm_description: str):
-        identifier = randint(1000, 9999)
+        identifier = str(randint(1000, 9999))
         while identifier in self.data["shops"]:
-            identifier = randint(1000, 9999)
+            identifier = str(randint(1000, 9999))
         self.data["shops"][identifier] = {
             "name": name,
             "offer": offer,
