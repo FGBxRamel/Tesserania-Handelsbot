@@ -4,12 +4,12 @@ from os import makedirs, path
 from time import strftime, time, localtime
 from random import randint
 
-import interactions as dc
+import interactions as i
 
 scope_ids = []
 
 
-class OfferCommand(dc.Extension):
+class OfferCommand(i.Extension):
     def __init__(self, client) -> None:
         self.client = client
         self.data_folder_path = 'data/offer/'
@@ -68,26 +68,26 @@ class OfferCommand(dc.Extension):
     def user_is_privileged(self, roles: list[int]) -> bool:
         return any(role in self.privileged_roles_ids for role in roles)
 
-    @dc.extension_command(
+    @i.slash_command(
         name="angebot",
         description="Der Befehl für Angebote.",
         scope=scope_ids,
         options=[
-            dc.Option(
+            i.Option(
                 name="aktion",
                 description="Das, was du tuen willst.",
-                type=dc.OptionType.STRING,
+                type=i.OptionType.STRING,
                 required=True,
                 choices=[
-                    dc.Choice(
+                    i.Choice(
                         name="erstellen",
                         value="create"
                     ),
-                    dc.Choice(
+                    i.Choice(
                         name="löschen",
                         value="delete"
                     ),
-                    dc.Choice(
+                    i.Choice(
                         name="bearbeiten",
                         value="edit"
                     )
@@ -95,37 +95,37 @@ class OfferCommand(dc.Extension):
             )
         ]
     )
-    async def offer(self, ctx: dc.CommandContext, aktion: str):
+    async def offer(self, ctx: i.SlashContext, aktion: str):
         if aktion == "create":
             if not str(ctx.author.id) in self.data["count"]:
                 self.data["count"][str(ctx.author.id)] = 0
             elif self.data["count"][str(ctx.author.id)] >= 3:
                 await ctx.send("Es dürfen maximal drei Waren angeboten werden.", ephemeral=True)
                 return
-            create_modal = dc.Modal(
+            create_modal = i.Modal(
                 title="Angebot erstellen",
                 custom_id="mod_create_offer",
                 components=[
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
+                    i.TextInput(
+                        style=i.TextStyleType.SHORT,
                         label="Titel",
                         custom_id="create_offer_title",
                         required=True
                     ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
+                    i.TextInput(
+                        style=i.TextStyleType.SHORT,
                         label="Preis",
                         custom_id="create_offer_price",
                         value="VB"
                     ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.PARAGRAPH,
+                    i.TextInput(
+                        style=i.TextStyleType.PARAGRAPH,
                         label="Was bietest du an?",
                         custom_id="create_offer_text",
                         required=True
                     ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
+                    i.TextInput(
+                        style=i.TextStyleType.SHORT,
                         label="Wie lange läuft das Angebot? (1-7)",
                         custom_id="create_offer_deadline",
                         required=True,
@@ -140,7 +140,7 @@ class OfferCommand(dc.Extension):
             for offer_id, offer_data in self.data["offers"].items():
                 if offer_data["user_id"] == str(ctx.author.id) or priviledged:
                     offer_options.append(
-                        dc.SelectOption(
+                        i.SelectOption(
                             label=offer_id,
                             value=offer_id,
                             description=offer_data["title"]
@@ -149,7 +149,7 @@ class OfferCommand(dc.Extension):
             if len(offer_options) == 0:
                 await ctx.send("Du hast keine Angebote, die du löschen kannst.", ephemeral=True)
                 return
-            delete_selectmenu = dc.SelectMenu(
+            delete_selectmenu = i.SelectMenu(
                 custom_id="delete_offer_menu",
                 placeholder="Wähle ein Angebot aus",
                 options=offer_options,
@@ -161,7 +161,7 @@ class OfferCommand(dc.Extension):
             offer_options = []
             for offer_id, offer_data in self.data["offers"].items():
                 offer_options.append(
-                    dc.SelectOption(
+                    i.SelectOption(
                         label=offer_id,
                         value=offer_id,
                         description=offer_data["title"]
@@ -170,7 +170,7 @@ class OfferCommand(dc.Extension):
             if len(offer_options) == 0:
                 await ctx.send("Es gibt keine Angebote, die du bearbeiten kannst.", ephemeral=True)
                 return
-            edit_selectmenu = dc.SelectMenu(
+            edit_selectmenu = i.SelectMenu(
                 custom_id="edit_offer_menu",
                 placeholder="Wähle ein Angebot aus",
                 options=offer_options,
@@ -179,8 +179,8 @@ class OfferCommand(dc.Extension):
             )
             await ctx.send("Wähle das Angebot aus, das du bearbeiten möchtest.", components=edit_selectmenu, ephemeral=True)
 
-    @dc.extension_modal("mod_create_offer")
-    async def create_offer_respone(self, ctx: dc.CommandContext, title: str, price: str, offer_text: str, deadline: str):
+    @i.modal_callback("mod_create_offer")
+    async def create_offer_respone(self, ctx: i.SlashContext, title: str, price: str, offer_text: str, deadline: str):
         identifier = randint(1000, 9999)
         while identifier in self.data["offers"]:
             identifier = randint(1000, 9999)
@@ -199,13 +199,13 @@ class OfferCommand(dc.Extension):
         self.data["offers"][str(identifier)]["deadline"] = end_time
         end_time = strftime("%d.%m.") + "- " + \
             strftime("%d.%m.", localtime(end_time))
-        app_embed = dc.Embed(
+        app_embed = i.Embed(
             title=title,
             description=f"\n{offer_text}\n\n**Preis:** {price}",
             color=0xdaa520,
-            author=dc.EmbedAuthor(
+            author=i.EmbedAuthor(
                 name=f"{ctx.user.username}, {end_time} ({deadline} Tage)"),
-            footer=dc.EmbedFooter(text=identifier)
+            footer=i.EmbedFooter(text=identifier)
         )
         channel = await ctx.get_channel()
         sent_message = await channel.send(embeds=app_embed)
@@ -216,12 +216,12 @@ class OfferCommand(dc.Extension):
         self.save_data()
         await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
 
-    @dc.extension_component("delete_offer_menu")
-    async def delete_offer_response(self, ctx: dc.CommandContext, ids: list):
+    @i.component_callback("delete_offer_menu")
+    async def delete_offer_response(self, ctx: i.SlashContext, ids: list):
         await ctx.defer(ephemeral=True)
-        offer_channel: dc.Channel = await ctx.get_channel()
+        offer_channel: i.Channel = await ctx.get_channel()
         for id in ids:
-            offer_message: dc.Message = await offer_channel.get_message(self.data["offers"][id]["message_id"])
+            offer_message: i.Message = await offer_channel.get_message(self.data["offers"][id]["message_id"])
             await offer_message.delete(reason=f"[Manuell] {ctx.author.user.username}")
             del self.data["offers"][id]
             self.data["count"][str(ctx.author.id)
@@ -229,29 +229,29 @@ class OfferCommand(dc.Extension):
         self.save_data()
         await ctx.send("Die Angebote wurden gelöscht.", ephemeral=True)
 
-    @dc.extension_component("edit_offer_menu")
-    async def edit_offer_response(self, ctx: dc.CommandContext, ids: list):
-        edit_modal = dc.Modal(
+    @i.component_callback("edit_offer_menu")
+    async def edit_offer_response(self, ctx: i.SlashContext, ids: list):
+        edit_modal = i.Modal(
             title="Angebot bearbeiten",
             custom_id="mod_edit_offer",
             description="Bearbeite das Angebot",
             components=[
-                dc.TextInput(
-                    style=dc.TextStyleType.SHORT,
+                i.TextInput(
+                    style=i.TextStyleType.SHORT,
                     label="Titel",
                     custom_id="edit_offer_title",
                     required=True,
                     value=self.data["offers"][ids[0]]["title"]
                 ),
-                dc.TextInput(
-                    style=dc.TextStyleType.PARAGRAPH,
+                i.TextInput(
+                    style=i.TextStyleType.PARAGRAPH,
                     label="Text",
                     custom_id="edit_offer_text",
                     required=True,
                     value=self.data["offers"][ids[0]]["text"]
                 ),
-                dc.TextInput(
-                    style=dc.TextStyleType.SHORT,
+                i.TextInput(
+                    style=i.TextStyleType.SHORT,
                     label="ID",
                     custom_id="edit_offer_id",
                     required=True,
@@ -262,8 +262,8 @@ class OfferCommand(dc.Extension):
         )
         await ctx.popup(edit_modal)
 
-    @dc.extension_modal("mod_edit_offer")
-    async def edit_offer_id(self, ctx: dc.CommandContext, title: str, text: str, id: str = ""):
+    @i.modal_callback("mod_edit_offer")
+    async def edit_offer_id(self, ctx: i.SlashContext, title: str, text: str, id: str = ""):
         try:
             int(id)
         except ValueError:
@@ -282,9 +282,9 @@ class OfferCommand(dc.Extension):
             return
         self.data["offers"][id]["title"] = title
         self.data["offers"][id]["text"] = text
-        offer_channel: dc.Channel = await ctx.get_channel()
-        offer_message: dc.Message = await offer_channel.get_message(self.data["offers"][id]["message_id"])
-        message_embed: dc.Embed = offer_message.embeds[0]
+        offer_channel: i.Channel = await ctx.get_channel()
+        offer_message: i.Message = await offer_channel.get_message(self.data["offers"][id]["message_id"])
+        message_embed: i.Embed = offer_message.embeds[0]
         text = f"{text}\n**Preis:** {self.data['offers'][id]['price']}\n*bearbeitet*"
         message_embed.title = title
         message_embed.description = text
@@ -292,6 +292,3 @@ class OfferCommand(dc.Extension):
         self.save_data()
         await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
-
-def setup(client):
-    OfferCommand(client)
