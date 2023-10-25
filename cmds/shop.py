@@ -82,7 +82,7 @@ class ShopCommand(i.Extension):
         }
         self.save_data()
 
-    def get_shop_ids_select_options(self, user_id: str, user_roles: list[int]) -> list[i.SelectOption]:
+    def get_shop_ids_select_options(self, user_id: str, user_roles: list[int]) -> list[i.StringSelectOption]:
         options = []
         priviliged = self.user_is_privileged(user_roles)
         for shop_id, shop_data in self.data["shops"].items():
@@ -112,7 +112,7 @@ class ShopCommand(i.Extension):
         description="Der Command für das Handelsregister.",
         scope=scope_ids,
         options=[
-            i.Option(
+            i.StringSelectOption(
                 name="aktion",
                 description="Die Aktion, die du ausführen möchtest.",
                 type=i.OptionType.STRING,
@@ -365,7 +365,7 @@ class ShopCommand(i.Extension):
         name="shop_admin",
         description="Admin-Commands für Shops",
         options=[
-            i.Option(
+            i.StringSelectOption(
                 name="aktion",
                 description="Was soll gemacht werden?",
                 required=True,
@@ -463,5 +463,3 @@ class ShopCommand(i.Extension):
                 )
         await ctx.author.send(embeds=[shops_embed])
         await ctx.edit("Bitte schaue in deine DMs!", components=[])
-
-
