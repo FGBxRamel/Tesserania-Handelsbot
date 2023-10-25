@@ -128,6 +128,7 @@ async def check_votings():
 
 @i.listen()
 async def on_ready():
+    print("Bot is ready!")
     global run
     if not run:
         wait_time = mktime(strptime(strftime("%d.%m.%Y") +
