@@ -4,7 +4,7 @@ import json
 from functools import partial
 from time import mktime, strftime, strptime, time
 
-import interactions as dc
+import interactions as i
 
 with open('config.ini', 'r') as config_file:
     config = cp.ConfigParser()
@@ -18,18 +18,19 @@ with open('config.ini', 'r') as config_file:
     voting_role_to_ping_id = config.getint('IDs', 'voting_role_to_ping')
 
 
-bot = dc.Client(
-    token=TOKEN)
+bot = i.Client(
+    token=TOKEN, sync_ext=True)
 
 scope_ids = SERVER_IDS
 run = False
 
 open("data.json", "a").close()
 
-bot.load("cmds.shop")
-bot.load("cmds.wichteln")
-bot.load("cmds.offer")
-bot.load("cmds.voting")
+bot.load_extension("interactions.ext.jurigged")
+bot.load_extension("cmds.shop")
+bot.load_extension("cmds.wichteln")
+bot.load_extension("cmds.offer")
+bot.load_extension("cmds.voting")
 
 
 def json_dump(data_dict: dict) -> None:
@@ -50,7 +51,7 @@ except json.JSONDecodeError:
 votings_timer_started: set = set()
 
 
-def evaluate_voting(message: dc.Message) -> str:
+def evaluate_voting(message: i.Message) -> str:
     """Returns the message embed with the voting result appended."""
     winner, winner_count = "", 0
     try:
@@ -61,7 +62,7 @@ def evaluate_voting(message: dc.Message) -> str:
                     reaction.count)
     except TypeError:
         pass
-    message_embed: dc.Embed = message.embeds[0]
+    message_embed: i.Embed = message.embeds[0]
     message_embed.description = message_embed.description + \
         f"\n\n**Ergebnis:** {winner}"
     return message_embed
@@ -69,18 +70,18 @@ def evaluate_voting(message: dc.Message) -> str:
 
 async def automatic_delete(oneshot: bool = False) -> None:
     if not oneshot:
-        bot._loop.call_later(86400, run_delete)
-    offer_channel: dc.Channel = await dc.get(bot, dc.Channel, object_id=offer_channel_id)
-    voting_channel: dc.Channel = await dc.get(bot, dc.Channel, object_id=voting_channel_id)
+        asyncio.get_running_loop().call_later(86400, run_delete)
+    offer_channel: i.GuildText = await bot.fetch_channel(offer_channel_id)
+    voting_channel: i.GuildText = await bot.fetch_channel(voting_channel_id)
     current_time = time()
     delete_offer_ids, delete_voting_ids = [], []
     with open(data["offer"]["data_file"], "r") as offer_file:
         offer_data: dict = json.load(offer_file)
     for id, values in offer_data["offers"].items():
         if values["deadline"] <= current_time:
-            message = await offer_channel.get_message(int(values["message_id"]))
+            message = await offer_channel.fetch_message(int(values["message_id"]))
             try:
-                await message.delete("[Auto] Cleanup")
+                await message.delete()
             except TypeError:
                 continue
             delete_offer_ids.append(id)
@@ -90,7 +91,7 @@ async def automatic_delete(oneshot: bool = False) -> None:
         votings_data: dict = json.load(voting_file)
     for id, values in votings_data.items():
         if int(values["deadline"]) <= int(current_time):
-            message: dc.Message = await voting_channel.get_message(int(values["message_id"]))
+            message: i.Message = await voting_channel.fetch_message(int(values["message_id"]))
             message_embed = evaluate_voting(message)
             await message.edit(embeds=message_embed)
             delete_voting_ids.append(id)
@@ -107,12 +108,12 @@ async def automatic_delete(oneshot: bool = False) -> None:
 
 
 def run_delete(oneshot: bool = False):
-    bot._loop.create_task(automatic_delete(oneshot=oneshot))
+    asyncio.get_running_loop().create_task(automatic_delete(oneshot=oneshot))
 
 
 # Make task that checks the votings file for new votings to start a delete timer
 # Go trough all the votings
-# Call bot._loop.call_later(wait_time - (localtime - create time), run_delete, oneshot=True)
+# Call asyncio.get_running_loop().call_later(wait_time - (localtime - create time), run_delete, oneshot=True)
 # Add voting ID to list so there's no duplicate timers
 async def check_votings():
     while True:
@@ -120,28 +121,29 @@ async def check_votings():
             votings: dict = json.load(voting_data_file)
         for id, value_list in votings.items():
             if id not in votings_timer_started:
-                bot._loop.call_later(
+                asyncio.get_running_loop().call_later(
                     value_list["wait_time"] - (time() - value_list["create_time"]), partial(run_delete, oneshot=True))
                 votings_timer_started.add(id)
         await asyncio.sleep(30)
 
 
-@bot.event()
+@i.listen()
 async def on_ready():
+    print("Bot is ready!")
     global run
     if not run:
         wait_time = mktime(strptime(strftime("%d.%m.%Y") +
                            " 23:59", "%d.%m.%Y %H:%M")) - time()
-        bot._loop.call_later(wait_time, run_delete)
-        bot._loop.create_task(check_votings())
+        asyncio.get_running_loop().call_later(wait_time, run_delete)
+        asyncio.get_running_loop().create_task(check_votings())
         run = True
 
 
-@bot.command(
+@i.slash_command(
     name="test",
     description="A test command to test stuff.",
 )
-async def test(ctx: dc.CommandContext):
+async def test(ctx: i.SlashContext):
     await ctx.send("Test worked!")
 
 bot.start()
