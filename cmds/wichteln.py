@@ -4,14 +4,14 @@ from os import makedirs, path
 from random import shuffle
 from time import strftime
 
-import interactions as dc
+import interactions as i
 
 scope_ids = []
 
 
-class WichtelCommand(dc.Extension):
+class WichtelCommand(i.Extension):
     def __init__(self, client) -> None:
-        self.client = client
+        self.client: i.Client = client
         self.data_folder_path = 'data/wichteln/'
         self.data_file_path = self.data_folder_path + 'wichteln.json'
         self.wichtel_text_file_path = self.data_folder_path + 'wichteln.txt'
@@ -53,40 +53,40 @@ class WichtelCommand(dc.Extension):
         }
         self.save_data()
 
-    @dc.extension_command(
+    @i.slash_command(
         name="wichteln",
         description="Der Befehl für das Wichteln.",
         scope=scope_ids,
         options=[
-            dc.Option(
+            i.Option(
                 name="aktion",
                 description="Das, was du tuen willst.",
-                type=dc.OptionType.STRING,
+                type=i.OptionType.STRING,
                 required=True,
                 choices=[
-                    dc.Choice(
+                    i.Choice(
                         name="starten",
                         value="start"
                     ),
-                    dc.Choice(
+                    i.Choice(
                         name="beenden",
                         value="end"
                     ),
-                    dc.Choice(
+                    i.Choice(
                         name="bearbeiten",
                         value="edit"
                     )
                 ]
             ),
-            dc.Option(
+            i.Option(
                 name="kanal",
                 description="Der Kanal, in dem die Wichtelung stattfinden soll.",
-                type=dc.OptionType.CHANNEL,
+                type=i.OptionType.CHANNEL,
                 required=False
             ),
         ]
     )
-    async def wichteln(self, ctx: dc.CommandContext, aktion: str, kanal: dc.Channel = None):
+    async def wichteln(self, ctx: i.SlashContext, aktion: str, kanal: i.Channel = None):
         if aktion == "start":
             if not kanal:
                 await ctx.send("Du musst einen Kanal angeben!", ephemeral=True)
@@ -100,14 +100,14 @@ class WichtelCommand(dc.Extension):
             with open(self.wichtel_text_file_path, "r") as f:
                 text = f.read()
             text.replace("$year$", strftime("%Y"))
-            wichteln_embed = dc.Embed(
+            wichteln_embed = i.Embed(
                 title="Wichteln",
                 description=text
             )
-            guild: dc.Guild = await ctx.get_guild()
-            minecrafter_role: dc.Role = await guild.get_role(self.wichtel_role_id)
+            guild: i.Guild = await ctx.get_guild()
+            minecrafter_role: i.Role = await guild.get_role(self.wichtel_role_id)
             await kanal.send(content=minecrafter_role.mention, embeds=wichteln_embed)
-            participants: list[dc.Member] = []
+            participants: list[i.Member] = []
             guild_members = await guild.get_all_members()
             for member in guild_members:
                 if self.wichtel_role_id in member.roles:
@@ -130,10 +130,8 @@ class WichtelCommand(dc.Extension):
                 await ctx.send("Es gibt keine aktive Wichtelung.", ephemeral=True)
                 return
             await ctx.defer(ephemeral=True)
-            guild: dc.Guild = await ctx.get_guild()
-            guild_id = int(guild.id)
-            participants = await dc.get(self.client, list[dc.Member], parent_id=guild_id, object_ids=self.data["participants"])
-            for participant in participants:
+            guild: i.Guild = await ctx.get_guild()
+            for participant in guild.members:
                 await participant.send(f"Die Wichtelung von {guild.name} wurde beendet.")
             self.data["active"] = False
             self.save_data()
@@ -141,34 +139,32 @@ class WichtelCommand(dc.Extension):
         elif aktion == "edit":
             with open(self.wichtel_text_file_path, "r") as f:
                 text = f.read()
-            wichteln_text_modal = dc.Modal(
+            wichteln_text_modal = i.Modal(
                 title="Wichteltext bearbeiten",
                 description="Hier kannst du den Text für die Wichtelung bearbeiten.",
                 custom_id="wichteln_text",
                 components=[
-                    dc.TextInput(
+                    i.TextInput(
                         label="Text",
                         placeholder="Text",
                         value=text,
                         custom_id="text",
-                        style=dc.TextStyleType.PARAGRAPH,
+                        style=i.TextStyleType.PARAGRAPH,
                         required=True
                     )
                 ]
             )
             await ctx.popup(wichteln_text_modal)
 
-    @dc.extension_modal("wichteln_text")
-    async def wichteln_text_response(self, ctx: dc.CommandContext, text: str):
+    @i.modal_callback("wichteln_text")
+    async def wichteln_text_response(self, ctx: i.ModalContext, text: str):
         with open(self.wichtel_text_file_path, "w") as f:
             f.write(text)
         text = text.replace("$year$", strftime("%Y"))
-        wichteln_text_preview_embed = dc.Embed(
+        wichteln_text_preview_embed = i.Embed(
             title="Textvorschau",
             description=text
         )
         await ctx.send("Der Text wurde gespeichert.", ephemeral=True, embeds=wichteln_text_preview_embed)
 
 
-def setup(client):
-    WichtelCommand(client)
