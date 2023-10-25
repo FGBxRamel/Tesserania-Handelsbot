@@ -26,6 +26,7 @@ run = False
 
 open("data.json", "a").close()
 
+bot.load_extension("interactions.ext.jurigged")
 bot.load_extension("cmds.shop")
 bot.load_extension("cmds.wichteln")
 bot.load_extension("cmds.offer")
