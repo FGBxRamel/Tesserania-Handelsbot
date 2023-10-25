@@ -26,6 +26,8 @@ class OfferCommand(i.Extension):
             scope_ids = config.get('IDs', 'server').split(',')
             self.privileged_roles_ids = [int(id) for id in config.get(
                 'IDs', 'privileged_roles').split(',')]
+            self.role_to_ping_id = config.getint(
+                'IDs', 'voting_role_to_ping')
 
     def save_data(self):
         with open(self.data_file_path, 'w+') as data_file:
@@ -209,7 +211,10 @@ class OfferCommand(i.Extension):
             footer=i.EmbedFooter(text=str(identifier))
         )
         channel = ctx.channel
-        sent_message = await channel.send(embeds=app_embed)
+        server: i.Guild = ctx.guild
+        role_to_ping: i.Role = server.get_role(
+            self.role_to_ping_id)
+        sent_message = await channel.send(content=role_to_ping.mention, embeds=app_embed)
         self.data["offers"][str(identifier)]["message_id"] = str(
             sent_message.id)
         try:
