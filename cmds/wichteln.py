@@ -86,7 +86,7 @@ class WichtelCommand(i.Extension):
             ),
         ]
     )
-    async def wichteln(self, ctx: i.SlashContext, aktion: str, kanal: i.GuildChannel = None):
+    async def wichteln(self, ctx: i.SlashContext, aktion: str, kanal: i.GuildText = None):
         if aktion == "start":
             if not kanal:
                 await ctx.send("Du musst einen Kanal angeben!", ephemeral=True)
@@ -113,14 +113,14 @@ class WichtelCommand(i.Extension):
                     participants.append(member)
             shuffle(participants)
             participants.append(participants[0])
-            i = 0
+            j = 0
             for participant in participants:
-                if i == len(participants) - 1:
+                if j == len(participants) - 1:
                     break
                 self.data["participants"].append(int(participant.id))
-                partner = participants[i + 1].user.username
+                partner = participants[j + 1].user.username
                 await participant.send(f"Du bist Wichtel von {partner}!\nFür mehr Infos schaue bitte auf {guild.name}.")
-                i += 1
+                j += 1
             self.data["active"] = True
             self.save_data()
             await ctx.send("Die Wichtelung wurde erstellt.", ephemeral=True)
@@ -150,7 +150,6 @@ class WichtelCommand(i.Extension):
             ]
             wichteln_text_modal = i.Modal(
                 title="Wichteltext bearbeiten",
-                description="Hier kannst du den Text für die Wichtelung bearbeiten.",
                 custom_id="wichteln_text",
                 *components
             )
