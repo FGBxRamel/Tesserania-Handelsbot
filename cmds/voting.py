@@ -5,12 +5,12 @@ from os import makedirs, path
 from random import randint
 from time import localtime, sleep, strftime, time
 
-import interactions as dc
+import interactions as i
 
 scope_ids = []
 
 
-class VotingCommand(dc.Extension):
+class VotingCommand(i.Extension):
     def __init__(self, client) -> None:
         self.client = client
         self.data_folder_path = 'data/voting/'
@@ -74,7 +74,7 @@ class VotingCommand(dc.Extension):
         return any(role in self.privileged_roles_ids for role in roles)
 
     @staticmethod
-    def evaluate_voting(message: dc.Message) -> str:
+    def evaluate_voting(message: i.Message) -> str:
         """Returns the message embed with the voting result appended."""
         winner, winner_count = "", 0
         try:
@@ -85,71 +85,71 @@ class VotingCommand(dc.Extension):
                         reaction.count)
         except TypeError:
             pass
-        message_embed: dc.Embed = message.embeds[0]
+        message_embed: i.Embed = message.embeds[0]
         message_embed.description = message_embed.description + \
             f"\n\n**Ergebnis:** {winner}"
         return message_embed
 
-    @dc.extension_command(
+    @i.slash_command(
         name="abstimmung",
         description="Der Befehl für Abstimmungen.",
         scope=scope_ids,
         options=[
-            dc.Option(
+            i.Option(
                 name="aktion",
                 description="Das, was du tuen willst.",
-                type=dc.OptionType.STRING,
+                type=i.OptionType.STRING,
                 required=True,
                 choices=[
-                    dc.Choice(
+                    i.Choice(
                         name="erstellen",
                         value="create"
                     ),
-                    dc.Choice(
+                    i.Choice(
                         name="löschen",
                         value="delete"
                     ),
-                    dc.Choice(
+                    i.Choice(
                         name="bearbeiten",
                         value="edit"
                     ),
-                    dc.Choice(
+                    i.Choice(
                         name="beenden",
                         value="close"
                     )
                 ]
             ),
-            dc.Option(
+            i.Option(
                 name="id",
                 description="Die ID des Shops, den du bearbeiten möchtest.",
-                type=dc.OptionType.INTEGER,
+                type=i.OptionType.INTEGER,
                 required=False,
                 max_value=9999
             )
         ]
     )
-    async def votings(self, ctx: dc.CommandContext, aktion: str, id: int = None):
+    async def votings(self, ctx: i.SlashContext, aktion: str, id: int = None):
         if aktion == "create":
-            create_voting_modal = dc.Modal(
+            create_voting_modal = i.Modal(
                 title="Abstimmung erstellen",
                 custom_id="mod_create_voting",
                 components=[
-                    dc.TextInput(
-                        style=dc.TextStyleType.PARAGRAPH,
+                    i.TextInput(
+                        style=i.TextStyleType.PARAGRAPH,
                         label="Welch Volksentscheid wollt ihr verkünden?",
                         custom_id="create_voting_text",
                         required=True,
                         placeholder="Liebe Mitbürger..."
                     ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
+                    i.TextInput(
+                        style=i.TextStyleType.SHORT,
                         label="Wie viel Entscheidungen habt ihr zu bieten?",
                         custom_id="create_voting_count",
                         required=True,
                         max_length=2
                     ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
+                    i.TextInput(
+                        style=i.TextStyleType.SHORT,
                         label="Wie lange läuft die Abstimmung?",
                         custom_id="create_voting_deadline",
                         required=True,
@@ -163,24 +163,24 @@ class VotingCommand(dc.Extension):
             for voting_id, voting_data in self.data.items():
                 if voting_data["user_id"] == str(ctx.author.id):
                     voting_options.append(
-                        dc.SelectOption(
+                        i.SelectOption(
                             label=voting_id,
                             value=voting_id
                         )
                     )
-            delete_selectmenu = dc.SelectMenu(
+            delete_selectmenu = i.SelectMenu(
                 custom_id="delete_voting_menu",
                 placeholder="Wähle eine Abstimmung aus",
                 options=voting_options
             )
             await ctx.send("Wähle eine Abstimmung aus, die du löschen möchtest.", components=delete_selectmenu, ephemeral=True)
         elif aktion == "edit":
-            edit_voting_modal = dc.Modal(
+            edit_voting_modal = i.Modal(
                 title="Abstimmung bearbeiten",
                 custom_id="mod_edit_voting",
                 components=[
-                    dc.TextInput(
-                        style=dc.TextStyleType.SHORT,
+                    i.TextInput(
+                        style=i.TextStyleType.SHORT,
                         label="ID der Abstimmmung",
                         custom_id="edit_voting_id",
                         required=True,
@@ -188,8 +188,8 @@ class VotingCommand(dc.Extension):
                         max_length=4,
                         value=str(id) if id else "0000"
                     ),
-                    dc.TextInput(
-                        style=dc.TextStyleType.PARAGRAPH,
+                    i.TextInput(
+                        style=i.TextStyleType.PARAGRAPH,
                         label="Abstimmungstext",
                         custom_id="edit_voting_text",
                         required=True
@@ -202,12 +202,12 @@ class VotingCommand(dc.Extension):
             for voting_id, voting_data in self.data.items():
                 if voting_data["user_id"] == str(ctx.author.id) or self.user_is_privileged(ctx.author.roles):
                     close_options.append(
-                        dc.SelectOption(
+                        i.SelectOption(
                             label=voting_id,
                             value=voting_id
                         )
                     )
-            close_menu = dc.SelectMenu(
+            close_menu = i.SelectMenu(
                 custom_id="close_voting_menu",
                 placeholder="Wähle eine Abstimmung aus",
                 options=close_options,
@@ -215,8 +215,8 @@ class VotingCommand(dc.Extension):
             )
             await ctx.send("Wähle eine Abstimmung aus, die du beenden möchtest.", components=close_menu, ephemeral=True)
 
-    @dc.extension_modal("mod_create_voting")
-    async def create_voting_response(self, ctx: dc.CommandContext, text: str, count: str, deadline: str):
+    @i.modal_callback("mod_create_voting")
+    async def create_voting_response(self, ctx: i.ModalContext, text: str, count: str, deadline: str):
         if int(count) > 10:
             await ctx.send("""Entschuldige, mehr als 10 Möglichkeiten
                 sind aktuell nicht verfügbar.""", ephemeral=True)
@@ -262,15 +262,15 @@ class VotingCommand(dc.Extension):
         end_time = strftime("%d.%m.") + "- " + \
             strftime("%d.%m. %H:%M", localtime(int(end_time)))
 
-        server: dc.Guild = await ctx.get_guild()
-        voting_role_to_ping: dc.Role = await server.get_role(self.voting_role_to_ping_id)
-        voting_embed = dc.Embed(
+        server: i.Guild = await ctx.get_guild()
+        voting_role_to_ping: i.Role = await server.get_role(self.voting_role_to_ping_id)
+        voting_embed = i.Embed(
             title="Liebe Mitbürger",
             description=f"\n{text}",
             color=0xdaa520,
-            author=dc.EmbedAuthor(
+            author=i.EmbedAuthor(
                 name=f"{ctx.user.username}, {end_time} ({deadline} {time_type})"),
-            footer=dc.EmbedFooter(text=identifier)
+            footer=i.EmbedFooter(text=identifier)
         )
         channel = await ctx.get_channel()
         sent_message = await channel.send(content=voting_role_to_ping.mention, embeds=voting_embed)
@@ -284,8 +284,8 @@ class VotingCommand(dc.Extension):
         self.save_data()
         await ctx.send("Die Abstimmung wurde entgegen genommen.", ephemeral=True)
 
-    @dc.extension_modal("mod_delete_voting")
-    async def delete_voting_response(self, ctx: dc.CommandContext, id: str):
+    @i.modal_callback("mod_delete_voting")
+    async def delete_voting_response(self, ctx: i.ModalContext, id: str):
         try:
             int(id)
         except ValueError:
@@ -303,15 +303,15 @@ class VotingCommand(dc.Extension):
             await ctx.send("Du bist nicht berechtigt diese Abstimmung zu löschen!",
                            ephemeral=True)
             return
-        votings_channel: dc.Channel = await ctx.get_channel()
-        voting_message: dc.Message = await votings_channel.get_message(self.data[id]["message_id"])
+        votings_channel: i.Channel = await ctx.get_channel()
+        voting_message: i.Message = await votings_channel.get_message(self.data[id]["message_id"])
         await voting_message.delete(reason=f"[Manuell] {ctx.user.username}")
         del self.data[id]
         self.save_data()
         await ctx.send("Die Abstimmung wurde gelöscht.", ephemeral=True)
 
-    @dc.extension_modal("mod_edit_voting")
-    async def edit_voting_response(self, ctx: dc.CommandContext, id: str, text: str):
+    @i.modal_callback("mod_edit_voting")
+    async def edit_voting_response(self, ctx: i.ModalContext, id: str, text: str):
         try:
             int(id)
         except ValueError:
@@ -329,21 +329,21 @@ class VotingCommand(dc.Extension):
             await ctx.send("Du bist nicht berechtigt diese Abstimmung zu bearbeiten!",
                            ephemeral=True)
             return
-        voting_channel: dc.Channel = await ctx.get_channel()
-        voting_message: dc.Message = await voting_channel.get_message(self.data[id]["message_id"])
-        message_embed: dc.Embed = voting_message.embeds[0]
+        voting_channel: i.Channel = await ctx.get_channel()
+        voting_message: i.Message = await voting_channel.get_message(self.data[id]["message_id"])
+        message_embed: i.Embed = voting_message.embeds[0]
         text = message_embed.description if type(
             text) is None or text == " " else text
         if "bearbeitet" not in text:
             text = text + "\n*bearbeitet*"
         message_embed.description = text
-        server: dc.Guild = await ctx.get_guild()
-        voting_role_to_ping: dc.Role = await server.get_role(self.voting_role_to_ping_id)
+        server: i.Guild = await ctx.get_guild()
+        voting_role_to_ping: i.Role = await server.get_role(self.voting_role_to_ping_id)
         await voting_message.edit(content=voting_role_to_ping.mention, embeds=message_embed)
         await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
-    @dc.extension_component("delete_voting_menu")
-    async def delete_voting(self, ctx: dc.CommandContext, ids: list):
+    @i.component_callback("delete_voting_menu")
+    async def delete_voting(self, ctx: i.ComponentContext, ids: list):
         id = ids[0]
         self.load_data()
         if id not in self.data:
@@ -353,9 +353,9 @@ class VotingCommand(dc.Extension):
             await ctx.send("Du bist nicht berechtigt diese Abstimmung zu beenden!",
                            ephemeral=True)
             return
-        votings_channel: dc.Channel = await ctx.get_channel()
-        voting_message: dc.Message = await votings_channel.get_message(self.data[id]["message_id"])
-        message_embed: dc.Embed = self.evaluate_voting(voting_message)
+        votings_channel: i.Channel = await ctx.get_channel()
+        voting_message: i.Message = await votings_channel.get_message(self.data[id]["message_id"])
+        message_embed: i.Embed = self.evaluate_voting(voting_message)
         current_time_formatted = strftime("%d.%m. %H:%M")
         message_embed.description = "**Diese Abstimmung wurde vorzeitig beendet!**\n" \
             + f"{ctx.user.username}, {current_time_formatted}" \
@@ -365,14 +365,14 @@ class VotingCommand(dc.Extension):
         self.save_data()
         await ctx.send("Die Abstimmung wurde beendet.", ephemeral=True)
 
-    @dc.extension_component("close_voting_menu")
-    async def close_voting(self, ctx: dc.CommandContext, ids: list):
+    @i.component_callback("close_voting_menu")
+    async def close_voting(self, ctx: i.ComponentContext, ids: list):
         await ctx.defer(ephemeral=True)
         self.load_data()
         for id in ids:
-            votings_channel: dc.Channel = await ctx.get_channel()
-            voting_message: dc.Message = await votings_channel.get_message(self.data[id]["message_id"])
-            message_embed: dc.Embed = self.evaluate_voting(voting_message)
+            votings_channel: i.Channel = await ctx.get_channel()
+            voting_message: i.Message = await votings_channel.get_message(self.data[id]["message_id"])
+            message_embed: i.Embed = self.evaluate_voting(voting_message)
             current_time_formatted = strftime("%d.%m. %H:%M")
             message_embed.description = "**Diese Abstimmung wurde vorzeitig beendet!**\n" \
                 + f"{ctx.user.username}, {current_time_formatted}" \
@@ -383,5 +383,3 @@ class VotingCommand(dc.Extension):
         await ctx.edit("Die Abstimmungen wurden beendet.", components=[])
 
 
-def setup(client):
-    VotingCommand(client)
