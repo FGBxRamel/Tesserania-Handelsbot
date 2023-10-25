@@ -37,20 +37,20 @@ class ShopCommand(i.Extension):
             'IDs', 'privileged_roles').split(',')]
 
     def refresh_components(self):
-        categorie_options = []
+        options = []
         if len(self.categories) == 0:
             print("No categories found in config.ini!")
             return
         for category in self.categories:
-            option = i.SelectOption(
+            option = i.StringSelectOption(
                 label=category,
                 value=category
             )
-            categorie_options.append(option)
-        self.categorie_selectmenu = i.SelectMenu(
+            options.append(option)
+        self.categorie_selectmenu = i.StringSelectMenu(
             custom_id="categorie_select",
             placeholder="Kategorie",
-            options=categorie_options
+            *options
         )
         self.abort_button = i.Button(
             label="Abbrechen",
@@ -87,7 +87,7 @@ class ShopCommand(i.Extension):
         priviliged = self.user_is_privileged(user_roles)
         for shop_id, shop_data in self.data["shops"].items():
             if shop_data["owner"] == user_id or priviliged:
-                option = i.SelectOption(
+                option = i.StringSelectOption(
                     label=shop_id,
                     value=str(shop_id),
                     description=shop_data["name"]
@@ -150,7 +150,7 @@ class ShopCommand(i.Extension):
         elif aktion == "edit":
             shop_ids_select_options = self.get_shop_ids_select_options(
                 str(ctx.user.id), ctx.member.roles)
-            shop_ids_selectmenu = i.SelectMenu(
+            shop_ids_selectmenu = i.StringSelectMenu(
                 custom_id="shop_edit_id_select",
                 placeholder="Shop-ID",
                 options=shop_ids_select_options
@@ -162,7 +162,7 @@ class ShopCommand(i.Extension):
             if len(shop_ids_select_options) == 0:
                 await ctx.send("Du hast keine Shops, die du löschen könntest!", ephemeral=True)
                 return
-            shop_ids_selectmenu = i.SelectMenu(
+            shop_ids_selectmenu = i.StringSelectMenu(
                 custom_id="shop_delete_id_select",
                 placeholder="Shop-ID",
                 options=shop_ids_select_options,
@@ -171,9 +171,9 @@ class ShopCommand(i.Extension):
             )
             await ctx.send("Bitte wähle einen Shop aus, den du löschen möchtest:", components=shop_ids_selectmenu, ephemeral=True)
         elif aktion == "search":
-            options = [i.SelectOption(label=category, value=category)
+            options = [i.StringSelectOption(label=category, value=category)
                        for category in self.categories]
-            category_selectmenu = i.SelectMenu(
+            category_selectmenu = i.StringSelectMenu(
                 custom_id="shop_search_category_select",
                 placeholder="Kategorie",
                 options=options,
@@ -383,7 +383,7 @@ class ShopCommand(i.Extension):
             options = []
             for shop in self.data["shops"]:
                 if not self.data["shops"][shop]["approved"]:
-                    options.append(i.SelectOption(
+                    options.append(i.StringSelectOption(
                         label=shop,
                         description=self.data["shops"][shop]["name"],
                         value=shop
@@ -391,7 +391,7 @@ class ShopCommand(i.Extension):
             if len(options) == 0:
                 await ctx.send("Es gibt keine Shops, die noch nicht genehmigt wurden.", ephemeral=True)
                 return
-            shop_approve_select_menu = i.SelectMenu(
+            shop_approve_select_menu = i.StringSelectMenu(
                 custom_id="shop_approve_id_select",
                 placeholder="Wähle die Shops aus die du genehmigen möchtest.",
                 min_values=1,
@@ -403,7 +403,7 @@ class ShopCommand(i.Extension):
             options = []
             for shop in self.data["shops"]:
                 if self.data["shops"][shop]["approved"]:
-                    options.append(i.SelectOption(
+                    options.append(i.StringSelectOption(
                         label=shop,
                         description=self.data["shops"][shop]["name"],
                         value=shop
@@ -411,7 +411,7 @@ class ShopCommand(i.Extension):
             if len(options) == 0:
                 await ctx.send("Es gibt keine Shops, die genehmigt wurden.", ephemeral=True)
                 return
-            shop_deny_select_menu = i.SelectMenu(
+            shop_deny_select_menu = i.StringSelectMenu(
                 custom_id="shop_deny_id_select",
                 placeholder="Wähle die Shops aus die du ablehnen möchtest.",
                 min_values=1,

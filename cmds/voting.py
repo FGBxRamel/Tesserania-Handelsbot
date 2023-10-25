@@ -95,31 +95,31 @@ class VotingCommand(i.Extension):
         description="Der Befehl für Abstimmungen.",
         scopes=scope_ids,
         options=[
-            i.Option(
+            i.SlashCommandOption(
                 name="aktion",
                 description="Das, was du tuen willst.",
                 type=i.OptionType.STRING,
                 required=True,
                 choices=[
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="erstellen",
                         value="create"
                     ),
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="löschen",
                         value="delete"
                     ),
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="bearbeiten",
                         value="edit"
                     ),
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="beenden",
                         value="close"
                     )
                 ]
             ),
-            i.Option(
+            i.SlashCommandOption(
                 name="id",
                 description="Die ID des Shops, den du bearbeiten möchtest.",
                 type=i.OptionType.INTEGER,
@@ -163,12 +163,12 @@ class VotingCommand(i.Extension):
             for voting_id, voting_data in self.data.items():
                 if voting_data["user_id"] == str(ctx.author.id):
                     voting_options.append(
-                        i.SelectOption(
+                        i.StringSelectOption(
                             label=voting_id,
                             value=voting_id
                         )
                     )
-            delete_selectmenu = i.SelectMenu(
+            delete_selectmenu = i.StringSelectMenu(
                 custom_id="delete_voting_menu",
                 placeholder="Wähle eine Abstimmung aus",
                 options=voting_options
@@ -202,12 +202,12 @@ class VotingCommand(i.Extension):
             for voting_id, voting_data in self.data.items():
                 if voting_data["user_id"] == str(ctx.author.id) or self.user_is_privileged(ctx.author.roles):
                     close_options.append(
-                        i.SelectOption(
+                        i.StringSelectOption(
                             label=voting_id,
                             value=voting_id
                         )
                     )
-            close_menu = i.SelectMenu(
+            close_menu = i.StringSelectMenu(
                 custom_id="close_voting_menu",
                 placeholder="Wähle eine Abstimmung aus",
                 options=close_options,

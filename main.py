@@ -137,7 +137,7 @@ async def on_ready():
         run = True
 
 
-@bot.command(
+@i.slash_command(
     name="test",
     description="A test command to test stuff.",
 )

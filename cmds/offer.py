@@ -73,21 +73,21 @@ class OfferCommand(i.Extension):
         description="Der Befehl für Angebote.",
         scopes=scope_ids,
         options=[
-            i.Option(
+            i.SlashCommandOption(
                 name="aktion",
                 description="Das, was du tuen willst.",
                 type=i.OptionType.STRING,
                 required=True,
                 choices=[
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="erstellen",
                         value="create"
                     ),
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="löschen",
                         value="delete"
                     ),
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="bearbeiten",
                         value="edit"
                     )
@@ -140,7 +140,7 @@ class OfferCommand(i.Extension):
             for offer_id, offer_data in self.data["offers"].items():
                 if offer_data["user_id"] == str(ctx.author.id) or priviledged:
                     offer_options.append(
-                        i.SelectOption(
+                        i.StringSelectOption(
                             label=offer_id,
                             value=offer_id,
                             description=offer_data["title"]
@@ -149,7 +149,7 @@ class OfferCommand(i.Extension):
             if len(offer_options) == 0:
                 await ctx.send("Du hast keine Angebote, die du löschen kannst.", ephemeral=True)
                 return
-            delete_selectmenu = i.SelectMenu(
+            delete_selectmenu = i.StringSelectMenu(
                 custom_id="delete_offer_menu",
                 placeholder="Wähle ein Angebot aus",
                 options=offer_options,
@@ -161,7 +161,7 @@ class OfferCommand(i.Extension):
             offer_options = []
             for offer_id, offer_data in self.data["offers"].items():
                 offer_options.append(
-                    i.SelectOption(
+                    i.StringSelectOption(
                         label=offer_id,
                         value=offer_id,
                         description=offer_data["title"]
@@ -170,7 +170,7 @@ class OfferCommand(i.Extension):
             if len(offer_options) == 0:
                 await ctx.send("Es gibt keine Angebote, die du bearbeiten kannst.", ephemeral=True)
                 return
-            edit_selectmenu = i.SelectMenu(
+            edit_selectmenu = i.StringSelectMenu(
                 custom_id="edit_offer_menu",
                 placeholder="Wähle ein Angebot aus",
                 options=offer_options,

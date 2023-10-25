@@ -58,27 +58,27 @@ class WichtelCommand(i.Extension):
         description="Der Befehl für das Wichteln.",
         scopes=scope_ids,
         options=[
-            i.Option(
+            i.SlashCommandOption(
                 name="aktion",
                 description="Das, was du tuen willst.",
                 type=i.OptionType.STRING,
                 required=True,
                 choices=[
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="starten",
                         value="start"
                     ),
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="beenden",
                         value="end"
                     ),
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="bearbeiten",
                         value="edit"
                     )
                 ]
             ),
-            i.Option(
+            i.SlashCommandOption(
                 name="kanal",
                 description="Der Kanal, in dem die Wichtelung stattfinden soll.",
                 type=i.OptionType.CHANNEL,
@@ -86,7 +86,7 @@ class WichtelCommand(i.Extension):
             ),
         ]
     )
-    async def wichteln(self, ctx: i.SlashContext, aktion: str, kanal: i.Channel = None):
+    async def wichteln(self, ctx: i.SlashContext, aktion: str, kanal: i.GuildChannel = None):
         if aktion == "start":
             if not kanal:
                 await ctx.send("Du musst einen Kanal angeben!", ephemeral=True)
