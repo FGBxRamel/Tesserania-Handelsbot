@@ -71,15 +71,15 @@ def evaluate_voting(message: i.Message) -> str:
 async def automatic_delete(oneshot: bool = False) -> None:
     if not oneshot:
         asyncio.get_running_loop().call_later(86400, run_delete)
-    offer_channel: i.Channel = await bot.fetch_channel(offer_channel_id)
-    voting_channel: i.Channel = await bot.fetch_channel(voting_channel_id)
+    offer_channel: i.GuildText = await bot.fetch_channel(offer_channel_id)
+    voting_channel: i.GuildText = await bot.fetch_channel(voting_channel_id)
     current_time = time()
     delete_offer_ids, delete_voting_ids = [], []
     with open(data["offer"]["data_file"], "r") as offer_file:
         offer_data: dict = json.load(offer_file)
     for id, values in offer_data["offers"].items():
         if values["deadline"] <= current_time:
-            message = await offer_channel.get_message(int(values["message_id"]))
+            message = await offer_channel.fetch_message(int(values["message_id"]))
             try:
                 await message.delete()
             except TypeError:
@@ -91,7 +91,7 @@ async def automatic_delete(oneshot: bool = False) -> None:
         votings_data: dict = json.load(voting_file)
     for id, values in votings_data.items():
         if int(values["deadline"]) <= int(current_time):
-            message: i.Message = await voting_channel.get_message(int(values["message_id"]))
+            message: i.Message = await voting_channel.fetch_message(int(values["message_id"]))
             message_embed = evaluate_voting(message)
             await message.edit(embeds=message_embed)
             delete_voting_ids.append(id)
