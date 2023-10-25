@@ -56,7 +56,7 @@ class WichtelCommand(i.Extension):
     @i.slash_command(
         name="wichteln",
         description="Der Befehl für das Wichteln.",
-        scope=scope_ids,
+        scopes=scope_ids,
         options=[
             i.Option(
                 name="aktion",

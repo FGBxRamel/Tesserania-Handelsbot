@@ -93,7 +93,7 @@ class VotingCommand(i.Extension):
     @i.slash_command(
         name="abstimmung",
         description="Der Befehl für Abstimmungen.",
-        scope=scope_ids,
+        scopes=scope_ids,
         options=[
             i.Option(
                 name="aktion",

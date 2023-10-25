@@ -71,7 +71,7 @@ class OfferCommand(i.Extension):
     @i.slash_command(
         name="angebot",
         description="Der Befehl für Angebote.",
-        scope=scope_ids,
+        scopes=scope_ids,
         options=[
             i.Option(
                 name="aktion",

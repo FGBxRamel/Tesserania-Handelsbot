@@ -110,7 +110,7 @@ class ShopCommand(i.Extension):
     @i.slash_command(
         name="shop",
         description="Der Command für das Handelsregister.",
-        scope=scope_ids,
+        scopes=scope_ids,
         options=[
             i.SlashCommandOption(
                 name="aktion",
