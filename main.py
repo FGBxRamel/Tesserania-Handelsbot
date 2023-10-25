@@ -19,7 +19,7 @@ with open('config.ini', 'r') as config_file:
 
 
 bot = i.Client(
-    token=TOKEN)
+    token=TOKEN, sync_ext=True)
 
 scope_ids = SERVER_IDS
 run = False
@@ -81,7 +81,7 @@ async def automatic_delete(oneshot: bool = False) -> None:
         if values["deadline"] <= current_time:
             message = await offer_channel.get_message(int(values["message_id"]))
             try:
-                await message.delete("[Auto] Cleanup")
+                await message.delete()
             except TypeError:
                 continue
             delete_offer_ids.append(id)

@@ -104,12 +104,11 @@ class WichtelCommand(i.Extension):
                 title="Wichteln",
                 description=text
             )
-            guild: i.Guild = await ctx.get_guild()
-            minecrafter_role: i.Role = await guild.get_role(self.wichtel_role_id)
+            guild: i.Guild = ctx.guild
+            minecrafter_role: i.Role = guild.get_role(self.wichtel_role_id)
             await kanal.send(content=minecrafter_role.mention, embeds=wichteln_embed)
             participants: list[i.Member] = []
-            guild_members = await guild.get_all_members()
-            for member in guild_members:
+            for member in guild.members:
                 if self.wichtel_role_id in member.roles:
                     participants.append(member)
             shuffle(participants)
@@ -130,7 +129,7 @@ class WichtelCommand(i.Extension):
                 await ctx.send("Es gibt keine aktive Wichtelung.", ephemeral=True)
                 return
             await ctx.defer(ephemeral=True)
-            guild: i.Guild = await ctx.get_guild()
+            guild: i.Guild = await ctx.guild
             for participant in guild.members:
                 await participant.send(f"Die Wichtelung von {guild.name} wurde beendet.")
             self.data["active"] = False
@@ -139,22 +138,23 @@ class WichtelCommand(i.Extension):
         elif aktion == "edit":
             with open(self.wichtel_text_file_path, "r") as f:
                 text = f.read()
+            components = [
+                i.InputText(
+                    label="Text",
+                    placeholder="Text",
+                    value=text,
+                    custom_id="text",
+                    style=i.TextStyles.PARAGRAPH,
+                    required=True
+                )
+            ]
             wichteln_text_modal = i.Modal(
                 title="Wichteltext bearbeiten",
                 description="Hier kannst du den Text für die Wichtelung bearbeiten.",
                 custom_id="wichteln_text",
-                components=[
-                    i.TextInput(
-                        label="Text",
-                        placeholder="Text",
-                        value=text,
-                        custom_id="text",
-                        style=i.TextStyleType.PARAGRAPH,
-                        required=True
-                    )
-                ]
+                *components
             )
-            await ctx.popup(wichteln_text_modal)
+            await ctx.send_modal(wichteln_text_modal)
 
     @i.modal_callback("wichteln_text")
     async def wichteln_text_response(self, ctx: i.ModalContext, text: str):
@@ -166,5 +166,3 @@ class WichtelCommand(i.Extension):
             description=text
         )
         await ctx.send("Der Text wurde gespeichert.", ephemeral=True, embeds=wichteln_text_preview_embed)
-
-

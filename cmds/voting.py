@@ -12,7 +12,7 @@ scope_ids = []
 
 class VotingCommand(i.Extension):
     def __init__(self, client) -> None:
-        self.client = client
+        self.client: i.Client = client
         self.data_folder_path = 'data/voting/'
         self.data_file_path = self.data_folder_path + 'voting.json'
         self.emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA",
@@ -118,51 +118,48 @@ class VotingCommand(i.Extension):
                         value="close"
                     )
                 ]
-            ),
-            i.SlashCommandOption(
-                name="id",
-                description="Die ID des Shops, den du bearbeiten möchtest.",
-                type=i.OptionType.INTEGER,
-                required=False,
-                max_value=9999
             )
         ]
     )
-    async def votings(self, ctx: i.SlashContext, aktion: str, id: int = None):
+    async def votings(self, ctx: i.SlashContext, aktion: str):
         if aktion == "create":
+            components = [
+                i.InputText(
+                    style=i.TextStyles.PARAGRAPH,
+                    label="Welch Volksentscheid wollt ihr verkünden?",
+                    custom_id="text",
+                    required=True,
+                    placeholder="Liebe Mitbürger..."
+                ),
+                i.InputText(
+                    style=i.TextStyles.SHORT,
+                    label="Wie viel Entscheidungen habt ihr zu bieten?",
+                    custom_id="count",
+                    required=True,
+                    max_length=2
+                ),
+                i.InputText(
+                    style=i.TextStyles.SHORT,
+                    label="Wie lange läuft die Abstimmung?",
+                    custom_id="deadline",
+                    required=True,
+                    max_length=3
+                )
+            ]
             create_voting_modal = i.Modal(
                 title="Abstimmung erstellen",
                 custom_id="mod_create_voting",
-                components=[
-                    i.TextInput(
-                        style=i.TextStyleType.PARAGRAPH,
-                        label="Welch Volksentscheid wollt ihr verkünden?",
-                        custom_id="create_voting_text",
-                        required=True,
-                        placeholder="Liebe Mitbürger..."
-                    ),
-                    i.TextInput(
-                        style=i.TextStyleType.SHORT,
-                        label="Wie viel Entscheidungen habt ihr zu bieten?",
-                        custom_id="create_voting_count",
-                        required=True,
-                        max_length=2
-                    ),
-                    i.TextInput(
-                        style=i.TextStyleType.SHORT,
-                        label="Wie lange läuft die Abstimmung?",
-                        custom_id="create_voting_deadline",
-                        required=True,
-                        max_length=3
-                    )
-                ]
+                *components
             )
-            await ctx.popup(create_voting_modal)
+            await ctx.send_modal(create_voting_modal)
         elif aktion == "delete":
-            voting_options = []
+            options = []
+            if len(self.data.items()) == 0:
+                await ctx.send("Es existieren keine Abstimmungen!")
+                return
             for voting_id, voting_data in self.data.items():
                 if voting_data["user_id"] == str(ctx.author.id):
-                    voting_options.append(
+                    options.append(
                         i.StringSelectOption(
                             label=voting_id,
                             value=voting_id
@@ -171,37 +168,39 @@ class VotingCommand(i.Extension):
             delete_selectmenu = i.StringSelectMenu(
                 custom_id="delete_voting_menu",
                 placeholder="Wähle eine Abstimmung aus",
-                options=voting_options
+                *options
             )
             await ctx.send("Wähle eine Abstimmung aus, die du löschen möchtest.", components=delete_selectmenu, ephemeral=True)
         elif aktion == "edit":
+            # TODO Implement select menu
+            components = [
+                i.InputText(
+                    style=i.TextStyles.SHORT,
+                    label="ID der Abstimmmung",
+                    custom_id="id",
+                    required=True,
+                    min_length=4,
+                    max_length=4,
+                    value="0000"
+                ),
+                i.InputText(
+                    style=i.TextStyles.PARAGRAPH,
+                    label="Abstimmungstext",
+                    custom_id="text",
+                    required=True
+                )
+            ]
             edit_voting_modal = i.Modal(
                 title="Abstimmung bearbeiten",
                 custom_id="mod_edit_voting",
-                components=[
-                    i.TextInput(
-                        style=i.TextStyleType.SHORT,
-                        label="ID der Abstimmmung",
-                        custom_id="edit_voting_id",
-                        required=True,
-                        min_length=4,
-                        max_length=4,
-                        value=str(id) if id else "0000"
-                    ),
-                    i.TextInput(
-                        style=i.TextStyleType.PARAGRAPH,
-                        label="Abstimmungstext",
-                        custom_id="edit_voting_text",
-                        required=True
-                    )
-                ]
+                *components
             )
-            await ctx.popup(edit_voting_modal)
+            await ctx.send_modal(edit_voting_modal)
         elif aktion == "close":
-            close_options = []
+            options = []
             for voting_id, voting_data in self.data.items():
                 if voting_data["user_id"] == str(ctx.author.id) or self.user_is_privileged(ctx.author.roles):
-                    close_options.append(
+                    options.append(
                         i.StringSelectOption(
                             label=voting_id,
                             value=voting_id
@@ -210,8 +209,8 @@ class VotingCommand(i.Extension):
             close_menu = i.StringSelectMenu(
                 custom_id="close_voting_menu",
                 placeholder="Wähle eine Abstimmung aus",
-                options=close_options,
-                max_values=len(close_options)
+                *options,
+                max_values=len(options)
             )
             await ctx.send("Wähle eine Abstimmung aus, die du beenden möchtest.", components=close_menu, ephemeral=True)
 
@@ -262,22 +261,23 @@ class VotingCommand(i.Extension):
         end_time = strftime("%d.%m.") + "- " + \
             strftime("%d.%m. %H:%M", localtime(int(end_time)))
 
-        server: i.Guild = await ctx.get_guild()
-        voting_role_to_ping: i.Role = await server.get_role(self.voting_role_to_ping_id)
+        server: i.Guild = ctx.guild
+        voting_role_to_ping: i.Role = server.get_role(
+            self.voting_role_to_ping_id)
         voting_embed = i.Embed(
             title="Liebe Mitbürger",
             description=f"\n{text}",
             color=0xdaa520,
             author=i.EmbedAuthor(
                 name=f"{ctx.user.username}, {end_time} ({deadline} {time_type})"),
-            footer=i.EmbedFooter(text=identifier)
+            footer=i.EmbedFooter(text=str(identifier))
         )
-        channel = await ctx.get_channel()
+        channel = ctx.channel
         sent_message = await channel.send(content=voting_role_to_ping.mention, embeds=voting_embed)
         emote_index = 0
         count = 2 if int(count) < 2 else count
         while int(count) > emote_index:
-            await sent_message.create_reaction(self.emote_chars[emote_index])
+            await sent_message.add_reaction(self.emote_chars[emote_index])
             emote_index += 1
             sleep(0.5)
         self.data[str(identifier)]["message_id"] = str(sent_message.id)
@@ -303,8 +303,8 @@ class VotingCommand(i.Extension):
             await ctx.send("Du bist nicht berechtigt diese Abstimmung zu löschen!",
                            ephemeral=True)
             return
-        votings_channel: i.Channel = await ctx.get_channel()
-        voting_message: i.Message = await votings_channel.get_message(self.data[id]["message_id"])
+        votings_channel: i.GuildText = ctx.channel
+        voting_message: i.Message = await votings_channel.fetch_message(self.data[id]["message_id"])
         await voting_message.delete(reason=f"[Manuell] {ctx.user.username}")
         del self.data[id]
         self.save_data()
@@ -329,49 +329,45 @@ class VotingCommand(i.Extension):
             await ctx.send("Du bist nicht berechtigt diese Abstimmung zu bearbeiten!",
                            ephemeral=True)
             return
-        voting_channel: i.Channel = await ctx.get_channel()
-        voting_message: i.Message = await voting_channel.get_message(self.data[id]["message_id"])
+        voting_channel: i.GuildText = ctx.channel
+        voting_message: i.Message = await voting_channel.fetch_message(self.data[id]["message_id"])
         message_embed: i.Embed = voting_message.embeds[0]
         text = message_embed.description if type(
             text) is None or text == " " else text
         if "bearbeitet" not in text:
             text = text + "\n*bearbeitet*"
         message_embed.description = text
-        server: i.Guild = await ctx.get_guild()
-        voting_role_to_ping: i.Role = await server.get_role(self.voting_role_to_ping_id)
+        server: i.Guild = ctx.guild
+        voting_role_to_ping: i.Role = server.get_role(
+            self.voting_role_to_ping_id)
         await voting_message.edit(content=voting_role_to_ping.mention, embeds=message_embed)
         await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
 
     @i.component_callback("delete_voting_menu")
-    async def delete_voting(self, ctx: i.ComponentContext, ids: list):
-        id = ids[0]
+    async def delete_voting(self, ctx: i.ComponentContext):
+        id = ctx.values[0]
         self.load_data()
         if id not in self.data:
             await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
             return
         if not self.data[id]["user_id"] == str(ctx.author.id) and not self.user_is_privileged(ctx.author.roles):
-            await ctx.send("Du bist nicht berechtigt diese Abstimmung zu beenden!",
+            await ctx.send("Du bist nicht berechtigt diese Abstimmung zu löschen!",
                            ephemeral=True)
             return
-        votings_channel: i.Channel = await ctx.get_channel()
-        voting_message: i.Message = await votings_channel.get_message(self.data[id]["message_id"])
-        message_embed: i.Embed = self.evaluate_voting(voting_message)
-        current_time_formatted = strftime("%d.%m. %H:%M")
-        message_embed.description = "**Diese Abstimmung wurde vorzeitig beendet!**\n" \
-            + f"{ctx.user.username}, {current_time_formatted}" \
-            + "\n\n" + message_embed.description
-        await voting_message.edit(embeds=message_embed)
+        votings_channel: i.GuildText = ctx.channel
+        voting_message: i.Message = await votings_channel.fetch_message(self.data[id]["message_id"])
+        await voting_message.delete()
         del self.data[id]
         self.save_data()
-        await ctx.send("Die Abstimmung wurde beendet.", ephemeral=True)
+        await ctx.send("Die Abstimmung wurde gelöscht.", ephemeral=True)
 
     @i.component_callback("close_voting_menu")
-    async def close_voting(self, ctx: i.ComponentContext, ids: list):
+    async def close_voting(self, ctx: i.ComponentContext):
         await ctx.defer(ephemeral=True)
         self.load_data()
-        for id in ids:
-            votings_channel: i.Channel = await ctx.get_channel()
-            voting_message: i.Message = await votings_channel.get_message(self.data[id]["message_id"])
+        for id in ctx.values:
+            votings_channel: i.GuildText = ctx.channel
+            voting_message: i.Message = await votings_channel.fetch_message(self.data[id]["message_id"])
             message_embed: i.Embed = self.evaluate_voting(voting_message)
             current_time_formatted = strftime("%d.%m. %H:%M")
             message_embed.description = "**Diese Abstimmung wurde vorzeitig beendet!**\n" \
@@ -380,6 +376,4 @@ class VotingCommand(i.Extension):
             await voting_message.edit(embeds=message_embed)
             del self.data[id]
         self.save_data()
-        await ctx.edit("Die Abstimmungen wurden beendet.", components=[])
-
-
+        await ctx.edit(content="Die Abstimmungen wurden beendet.", components=[])
