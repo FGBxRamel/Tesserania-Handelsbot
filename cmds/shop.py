@@ -112,25 +112,25 @@ class ShopCommand(i.Extension):
         description="Der Command für das Handelsregister.",
         scope=scope_ids,
         options=[
-            i.StringSelectOption(
+            i.SlashCommandOption(
                 name="aktion",
                 description="Die Aktion, die du ausführen möchtest.",
                 type=i.OptionType.STRING,
                 required=True,
                 choices=[
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="eintragen",
                         value="create"
                     ),
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="bearbeiten",
                         value="edit"
                     ),
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="löschen",
                         value="delete"
                     ),
-                    i.Choice(
+                    i.SlashCommandChoice(
                         name="durchsuchen",
                         value="search"
                     )
@@ -365,14 +365,14 @@ class ShopCommand(i.Extension):
         name="shop_admin",
         description="Admin-Commands für Shops",
         options=[
-            i.StringSelectOption(
+            i.SlashCommandOption(
                 name="aktion",
                 description="Was soll gemacht werden?",
                 required=True,
                 type=i.OptionType.STRING,
                 choices=[
-                    i.Choice(name="genehmigen", value="approve"),
-                    i.Choice(name="ablehnen", value="deny"),
+                    i.SlashCommandChoice(name="genehmigen", value="approve"),
+                    i.SlashCommandChoice(name="ablehnen", value="deny"),
                 ]
             )
         ]
