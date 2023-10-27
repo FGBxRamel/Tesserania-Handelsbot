@@ -3,8 +3,21 @@ import configparser as cp
 import json
 from functools import partial
 from time import mktime, strftime, strptime, time
+import sqlite3 as sql
 
 import interactions as i
+
+def setup_database(file: str = "data.db"):
+    with sql.connect(file) as conn:
+        c = conn.cursor()
+        c.execute(
+            "CREATE TABLE IF NOT EXISTS offers (offer_id INTEGER PRIMARY KEY, title TEXT,\
+            user_id BIGINT, message_id BIGINT, deadline FLOAT,\
+            description TEXT, price TEXT, FOREIGN KEY(user_id) REFERENCES users(user_id))")
+        c.execute("CREATE TABLE IF NOT EXISTS users (user_id BIGINT PRIMARY KEY,\
+            offers_count INTEGER)")
+        conn.commit()
+setup_database()
 
 with open('config.ini', 'r') as config_file:
     config = cp.ConfigParser()
@@ -36,10 +49,6 @@ bot.load_extension("cmds.voting")
 def json_dump(data_dict: dict) -> None:
     with open("data.json", "w+") as dump_file:
         json.dump(data_dict, dump_file, indent=4)
-
-
-def user_is_privileged(roles: list) -> bool:
-    return any(role in privileged_roles_ids for role in roles)
 
 
 try:
