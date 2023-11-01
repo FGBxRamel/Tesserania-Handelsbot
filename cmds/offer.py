@@ -1,9 +1,8 @@
 import configparser as cp
-import json
-from os import makedirs, path
 from time import strftime, time, localtime
 from random import randint
 import sqlite3 as sql
+import database as db
 
 import interactions as i
 
@@ -65,11 +64,11 @@ class OfferCommand(i.Extension):
     )
     async def offer(self, ctx: i.SlashContext, aktion: str):
         if aktion == "create":
-            if self.get_data("users", {"user_id": str(ctx.author.id)}) is None:
-                self.save_data("users", "user_id, offers_count",
-                               (int(ctx.author.id), 0))
+            if db.get_data("users", {"user_id": str(ctx.author.id)}) is None:
+                db.save_data("users", "user_id, offers_count",
+                             (int(ctx.author.id), 0))
 
-            offer_count = self.get_data(
+            offer_count = db.get_data(
                 "users", {"user_id": int(ctx.author.id)}, attribute="offers_count")[0]
             if int(offer_count) >= 3:
                 await ctx.send("Du hast bereits 3 Angebote erstellt.", ephemeral=True)
@@ -112,7 +111,7 @@ class OfferCommand(i.Extension):
             priviledged = self.user_is_privileged(ctx.author.roles)
             options = []
             if not priviledged:
-                for offer in self.get_data("offers", {"user_id": str(ctx.author.id)}, attribute="offer_id, title", fetch_all=True):
+                for offer in db.get_data("offers", {"user_id": str(ctx.author.id)}, attribute="offer_id, title", fetch_all=True):
                     options.append(
                         i.StringSelectOption(
                             label=offer[0],
@@ -121,7 +120,7 @@ class OfferCommand(i.Extension):
                         )
                     )
             else:
-                for offer in self.get_data("offers", attribute="offer_id, title", fetch_all=True):
+                for offer in db.get_data("offers", attribute="offer_id, title", fetch_all=True):
                     options.append(
                         i.StringSelectOption(
                             label=offer[0],
@@ -142,7 +141,7 @@ class OfferCommand(i.Extension):
             await ctx.send("Wähle die Angebote aus, die du löschen möchtest.", components=delete_selectmenu, ephemeral=True)
         elif aktion == "edit":
             options = []
-            for offer in self.get_data("offers", {"user_id": str(ctx.author.id)}, attribute="offer_id, title", fetch_all=True):
+            for offer in db.get_data("offers", {"user_id": str(ctx.author.id)}, attribute="offer_id, title", fetch_all=True):
                 options.append(
                     i.StringSelectOption(
                         label=offer[0],
@@ -191,12 +190,12 @@ class OfferCommand(i.Extension):
             self.role_to_ping_id)
         sent_message = await channel.send(content=role_to_ping.mention, embeds=app_embed)
 
-        self.save_data("offers", "offer_id, title, user_id, price, description, deadline, message_id",
-                       (identifier, title, int(ctx.author.id), price, text, numeric_end_time, int(sent_message.id)))
-        offer_count = int(self.get_data(
+        db.save_data("offers", "offer_id, title, user_id, price, description, deadline, message_id",
+                     (identifier, title, int(ctx.author.id), price, text, numeric_end_time, int(sent_message.id)))
+        offer_count = int(db.get_data(
             "users", {"user_id": int(ctx.author.id)}, attribute="offers_count")[0])
-        self.update_data("users", "offers_count", offer_count +
-                         1, {"user_id": int(ctx.author.id)})
+        db.update_data("users", "offers_count", offer_count +
+                       1, {"user_id": int(ctx.author.id)})
         await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
 
     @i.component_callback("delete_offer_menu")
@@ -204,20 +203,20 @@ class OfferCommand(i.Extension):
         await ctx.defer(ephemeral=True)
         offer_channel: i.GuildText = ctx.channel
         for id in ctx.values:
-            message_id = self.get_data(
+            message_id = db.get_data(
                 "offers", {"offer_id": id}, attribute="message_id")[0]
             offer_message: i.Message = await offer_channel.fetch_message(message_id)
             await offer_message.delete()
-            self.delete_data("offers", {"offer_id": id})
-            offer_count = int(self.get_data(
+            db.delete_data("offers", {"offer_id": id})
+            offer_count = int(db.get_data(
                 "users", {"user_id": int(ctx.author.id)}, attribute="offers_count")[0])
-            self.update_data("users", "offers_count", offer_count - 1,
-                             {"user_id": int(ctx.author.id)})
+            db.update_data("users", "offers_count", offer_count - 1,
+                           {"user_id": int(ctx.author.id)})
         await ctx.send("Die Angebote wurden gelöscht.", ephemeral=True)
 
     @i.component_callback("edit_offer_menu")
     async def edit_offer_response(self, ctx: i.ComponentContext):
-        title, text = self.get_data(
+        title, text = db.get_data(
             "offers", {"offer_id": ctx.values[0]}, attribute="title, description", fetch_all=True)[0]
         components = [
             i.InputText(
@@ -265,13 +264,13 @@ class OfferCommand(i.Extension):
         if id not in self.get_identifiers():
             await ctx.send("Diese ID existiert nicht!", ephemeral=True)
             return
-        offer_owner_id = self.get_data(
+        offer_owner_id = db.get_data(
             "offers", {"offer_id": id}, attribute="user_id")[0]
         if not str(offer_owner_id) == str(ctx.author.id):
             await ctx.send("Du bist nicht berechtigt dieses Angebot zu bearbeiten!",
                            ephemeral=True)
             return
-        message_id, price = self.get_data(
+        message_id, price = db.get_data(
             "offers", {"offer_id": id}, attribute="message_id, price", fetch_all=True)[0]
         offer_channel: i.GuildText = ctx.channel
         offer_message: i.Message = await offer_channel.fetch_message(message_id)
@@ -280,6 +279,6 @@ class OfferCommand(i.Extension):
         message_embed.title = title
         message_embed.description = edited_text
         await offer_message.edit(embeds=message_embed)
-        self.update_data("offers", "title", title, {"offer_id": id})
-        self.update_data("offers", "description", text, {"offer_id": id})
+        db.update_data("offers", "title", title, {"offer_id": id})
+        db.update_data("offers", "description", text, {"offer_id": id})
         await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
