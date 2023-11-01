@@ -1,10 +1,11 @@
 import sqlite3 as sql
 
+# Beware: All of this is not sufficient to stop SQL injection, but enough for this bot
+
 
 def get_data(table: str, *conditions: dict, attribute: str = '*', fetch_all: bool = False) -> tuple:
     con = sql.connect("data.db")
     cur = con.cursor()
-    # Beware: This is not sufficient to stop SQL injection, but enough for this bot
     attribute = attribute.replace(';', '')
     table = table.replace(';', '')
     if len(conditions) == 0:
@@ -23,7 +24,6 @@ def get_data(table: str, *conditions: dict, attribute: str = '*', fetch_all: boo
 
 
 def save_data(table: str, attributes: str, values: tuple):
-    # Beware: This is not sufficient to stop SQL injection, but enough for this bot
     table = table.replace(';', '')
     attributes = attributes.replace(';', '')
     safer_values = (i.replace(";", "") for i in values)
@@ -35,7 +35,6 @@ def save_data(table: str, attributes: str, values: tuple):
 
 
 def delete_data(table: str, conditions: dict):
-    # Beware: This is not sufficient to stop SQL injection, but enough for this bot
     table = table.replace(';', '')
     con = sql.connect("data.db")
     cur = con.cursor()
@@ -48,7 +47,6 @@ def delete_data(table: str, conditions: dict):
 
 
 def update_data(table: str, attribute: str, value, conditions: dict):
-    # Beware: This is not sufficient to stop SQL injection, but enough for this bot
     table = table.replace(';', '')
     attribute = attribute.replace(';', '')
     con = sql.connect("data.db")
