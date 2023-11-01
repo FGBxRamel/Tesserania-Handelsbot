@@ -1,9 +1,12 @@
 import sqlite3 as sql
+from typing import Union
 
 # Beware: All of this is not sufficient to stop SQL injection, but enough for this bot
 
 
-def get_data(table: str, *conditions: dict, attribute: str = '*', fetch_all: bool = False) -> tuple:
+def get_data(table: str, *conditions: dict, attribute: str = '*', fetch_all: bool = False) -> list[tuple] | tuple | None:
+    """Returns data from the database. If fetch_all is True, it returns a list of tuples, 
+    else a single tuple or None if no entry is found."""
     con = sql.connect("data.db")
     cur = con.cursor()
     attribute = attribute.replace(';', '')
@@ -23,7 +26,8 @@ def get_data(table: str, *conditions: dict, attribute: str = '*', fetch_all: boo
         return cur.fetchone()
 
 
-def save_data(table: str, attributes: str, values: tuple):
+def save_data(table: str, attributes: str, values: tuple) -> None:
+    """Saves data to the database."""
     table = table.replace(';', '')
     attributes = attributes.replace(';', '')
     safer_values = (i.replace(";", "") for i in values)
@@ -34,7 +38,8 @@ def save_data(table: str, attributes: str, values: tuple):
     con.commit()
 
 
-def delete_data(table: str, conditions: dict):
+def delete_data(table: str, conditions: dict) -> None:
+    """Deletes data from the database."""
     table = table.replace(';', '')
     con = sql.connect("data.db")
     cur = con.cursor()
@@ -46,7 +51,8 @@ def delete_data(table: str, conditions: dict):
     con.commit()
 
 
-def update_data(table: str, attribute: str, value, conditions: dict):
+def update_data(table: str, attribute: str, value, conditions: dict) -> None:
+    """Updates data in the database."""
     table = table.replace(';', '')
     attribute = attribute.replace(';', '')
     con = sql.connect("data.db")
