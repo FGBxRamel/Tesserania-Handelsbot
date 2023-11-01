@@ -1,5 +1,4 @@
 import sqlite3 as sql
-from typing import Union
 
 # Beware: All of this is not sufficient to stop SQL injection, but enough for this bot
 
