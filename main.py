@@ -7,6 +7,7 @@ import sqlite3 as sql
 
 import interactions as i
 
+
 def setup_database(file: str = "data.db"):
     with sql.connect(file) as conn:
         c = conn.cursor()
@@ -16,7 +17,13 @@ def setup_database(file: str = "data.db"):
             description TEXT, price TEXT, FOREIGN KEY(user_id) REFERENCES users(user_id))")
         c.execute("CREATE TABLE IF NOT EXISTS users (user_id BIGINT PRIMARY KEY,\
             offers_count INTEGER)")
+        c.execute("CREATE TABLE IF NOT EXISTS votings (voting_id INTEGER PRIMARY KEY,\
+                  user_id BIGINT, message_id BIGINT, deadline FLOAT,\
+                  description TEXT, wait_time FLOAT, create_time FLOAT,\
+                    FOREIGN KEY(user_id) REFERENCES users(user_id))")
         conn.commit()
+
+
 setup_database()
 
 with open('config.ini', 'r') as config_file:

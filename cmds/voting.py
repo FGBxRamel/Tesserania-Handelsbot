@@ -4,6 +4,8 @@ import sys
 from os import makedirs, path
 from random import randint
 from time import localtime, sleep, strftime, time
+import database as db
+import sqlite3 as sql
 
 import interactions as i
 
@@ -13,13 +15,10 @@ scope_ids = []
 class VotingCommand(i.Extension):
     def __init__(self, client) -> None:
         self.client: i.Client = client
-        self.data_folder_path = 'data/voting/'
-        self.data_file_path = self.data_folder_path + 'voting.json'
         self.emote_chars = ["\U0001F1E6", "\U0001F1E7", "\U0001F1E8", "\U0001F1E9", "\U0001F1EA",
                             "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
-        self.data = {}
+        self.transfer_data = {}
         self.refresh_config()
-        self.setup_data()
 
     def refresh_config(self) -> None:
         with open('config.ini', 'r') as config_file:
@@ -32,43 +31,12 @@ class VotingCommand(i.Extension):
             self.voting_role_to_ping_id = config.getint(
                 'IDs', 'voting_role_to_ping')
 
-    def save_data(self) -> None:
-        with open(self.data_file_path, 'w+') as data_file:
-            json.dump(self.data, data_file, indent=4)
-
-    def load_data(self) -> None:
-        with open(self.data_file_path, 'r') as data_file:
-            self.data = json.load(data_file)
-
-    def setup_data(self) -> None:
-        def create_data_file():
-            open(self.data_file_path, 'a').close()
-            self.data = {}
-            self.save_data()
-        if not path.exists(self.data_folder_path):
-            makedirs(self.data_folder_path)
-        if path.exists(self.data_file_path):
-            try:
-                self.load_data()
-            except json.decoder.JSONDecodeError:
-                create_data_file()
-        else:
-            create_data_file()
-
-        with open("data.json", "r") as data_file:
-            try:
-                transfer_data = json.load(data_file)
-            except json.decoder.JSONDecodeError:
-                data_file_content = data_file.read()
-                print(
-                    f"data.json could not be loaded! It probably is empty.\n{data_file_content}")
-                sys.exit()
-        with open("data.json", "w") as data_file:
-            # Do it so the main file knows where the votings are stored
-            transfer_data["voting"] = {
-                "data_file": self.data_file_path,
-            }
-            json.dump(transfer_data, data_file, indent=4)
+    @staticmethod
+    def get_identifiers() -> list[int]:
+        con = sql.connect("data.db")
+        cur = con.cursor()
+        cur.execute("SELECT voting_id FROM votings")
+        return [int(ident[0]) for ident in cur.fetchall()]
 
     def user_is_privileged(self, roles: list[int]) -> bool:
         return any(role in self.privileged_roles_ids for role in roles)
@@ -154,17 +122,22 @@ class VotingCommand(i.Extension):
             await ctx.send_modal(create_voting_modal)
         elif aktion == "delete":
             options = []
-            if len(self.data.items()) == 0:
+            if db.get_data("votings", {"user_id": int(ctx.author.id)}, fetch_all=True) == []:
                 await ctx.send("Es existieren keine Abstimmungen!")
                 return
-            for voting_id, voting_data in self.data.items():
-                if voting_data["user_id"] == str(ctx.author.id):
-                    options.append(
-                        i.StringSelectOption(
-                            label=voting_id,
-                            value=voting_id
-                        )
+            elif self.user_is_privileged(ctx.author.roles):
+                votings: list[tuple] = db.get_data(
+                    "votings", attribute="voting_id", fetch_all=True)
+            else:
+                votings: list[tuple] = db.get_data(
+                    "votings", {"user_id": int(ctx.author.id)}, attribute="voting_id", fetch_all=True)
+            for voting_tuple in votings:
+                options.append(
+                    i.StringSelectOption(
+                        label=voting_tuple[0],
+                        value=voting_tuple[0]
                     )
+                )
             delete_selectmenu = i.StringSelectMenu(
                 custom_id="delete_voting_menu",
                 placeholder="Wähle eine Abstimmung aus",
@@ -172,40 +145,43 @@ class VotingCommand(i.Extension):
             )
             await ctx.send("Wähle eine Abstimmung aus, die du löschen möchtest.", components=delete_selectmenu, ephemeral=True)
         elif aktion == "edit":
-            # TODO Implement select menu
-            components = [
-                i.InputText(
-                    style=i.TextStyles.SHORT,
-                    label="ID der Abstimmmung",
-                    custom_id="id",
-                    required=True,
-                    min_length=4,
-                    max_length=4,
-                    value="0000"
-                ),
-                i.InputText(
-                    style=i.TextStyles.PARAGRAPH,
-                    label="Abstimmungstext",
-                    custom_id="text",
-                    required=True
+            votings = db.get_data(
+                "votings", {"user_id": int(ctx.author.id)}, attribute="voting_id", fetch_all=True)
+            if votings == []:
+                await ctx.send("Es existieren keine Abstimmungen!")
+                return
+            options = []
+            for voting_tuple in votings:
+                options.append(
+                    i.StringSelectOption(
+                        label=voting_tuple[0],
+                        value=voting_tuple[0]
+                    )
                 )
-            ]
-            edit_voting_modal = i.Modal(
-                title="Abstimmung bearbeiten",
-                custom_id="mod_edit_voting",
-                *components
+            edit_selectmenu = i.StringSelectMenu(
+                custom_id="edit_voting_menu",
+                placeholder="Wähle eine Abstimmung aus",
+                *options
             )
-            await ctx.send_modal(edit_voting_modal)
+            await ctx.send("Wähle eine Abstimmung aus, die du bearbeiten möchtest.", components=edit_selectmenu, ephemeral=True)
         elif aktion == "close":
             options = []
-            for voting_id, voting_data in self.data.items():
-                if voting_data["user_id"] == str(ctx.author.id) or self.user_is_privileged(ctx.author.roles):
-                    options.append(
-                        i.StringSelectOption(
-                            label=voting_id,
-                            value=voting_id
-                        )
+            if db.get_data("votings", {"user_id": int(ctx.author.id)}, fetch_all=True) == []:
+                await ctx.send("Es existieren keine Abstimmungen!")
+                return
+            elif self.user_is_privileged(ctx.author.roles):
+                votings: list[tuple] = db.get_data(
+                    "votings", attribute="voting_id", fetch_all=True)
+            else:
+                votings: list[tuple] = db.get_data(
+                    "votings", {"user_id": int(ctx.author.id)}, attribute="voting_id", fetch_all=True)
+            for voting_tuple in votings:
+                options.append(
+                    i.StringSelectOption(
+                        label=voting_tuple[0],
+                        value=voting_tuple[0]
                     )
+                )
             close_menu = i.StringSelectMenu(
                 custom_id="close_voting_menu",
                 placeholder="Wähle eine Abstimmung aus",
@@ -245,20 +221,14 @@ class VotingCommand(i.Extension):
         await ctx.defer(ephemeral=True)
         deadline_in_seconds = float(deadline) * time_in_seconds
         identifier = randint(1000, 9999)
-        self.load_data()
-        while identifier in self.data:
+        identifiers = self.get_identifiers()
+        while identifier in identifiers:
             identifier = randint(1000, 9999)
-
         end_time = time() + deadline_in_seconds
-        self.data[str(identifier)] = {
-            "user_id": str(ctx.author.id),
-            "text": text,
-            "create_time": time(),
-            "wait_time": deadline_in_seconds,
-            "deadline": end_time
-        }
+        db.save_data("votings", "voting_id, user_id, description, create_time, wait_time, deadline",
+                     (identifier, int(ctx.author.id), text, time(), deadline_in_seconds, end_time))
 
-        end_time = strftime("%d.%m.") + "- " + \
+        formatted_end_time = strftime("%d.%m.") + "- " + \
             strftime("%d.%m. %H:%M", localtime(int(end_time)))
 
         server: i.Guild = ctx.guild
@@ -269,7 +239,7 @@ class VotingCommand(i.Extension):
             description=f"\n{text}",
             color=0xdaa520,
             author=i.EmbedAuthor(
-                name=f"{ctx.user.username}, {end_time} ({deadline} {time_type})"),
+                name=f"{ctx.user.username}, {formatted_end_time} ({deadline} {time_type})"),
             footer=i.EmbedFooter(text=str(identifier))
         )
         channel = ctx.channel
@@ -280,100 +250,73 @@ class VotingCommand(i.Extension):
             await sent_message.add_reaction(self.emote_chars[emote_index])
             emote_index += 1
             sleep(0.5)
-        self.data[str(identifier)]["message_id"] = str(sent_message.id)
-        self.save_data()
+        db.update_data("votings", "message_id", int(
+            sent_message.id), {"voting_id": identifier})
         await ctx.send("Die Abstimmung wurde entgegen genommen.", ephemeral=True)
 
-    @i.modal_callback("mod_delete_voting")
-    async def delete_voting_response(self, ctx: i.ModalContext, id: str):
-        try:
-            int(id)
-        except ValueError:
-            await ctx.send("Die ID hat ein fehlerhaftes Format!", ephemeral=True)
-            return
-        except BaseException as e:
-            await ctx.send(
-                f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
-            return
-        self.load_data()
-        if id not in self.data:
-            await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
-            return
-        if not self.data[id]["user_id"] == str(ctx.author.id) and not self.user_is_privileged(ctx.author.roles):
-            await ctx.send("Du bist nicht berechtigt diese Abstimmung zu löschen!",
-                           ephemeral=True)
-            return
-        votings_channel: i.GuildText = ctx.channel
-        voting_message: i.Message = await votings_channel.fetch_message(self.data[id]["message_id"])
-        await voting_message.delete(reason=f"[Manuell] {ctx.user.username}")
-        del self.data[id]
-        self.save_data()
-        await ctx.send("Die Abstimmung wurde gelöscht.", ephemeral=True)
+    @i.component_callback("edit_voting_menu")
+    async def edit_voting_response(self, ctx: i.ComponentContext):
+        id = ctx.values[0]
+        self.transfer_data[int(ctx.author.id)] = id
+        text: str = db.get_data(
+            "votings", {"voting_id": id}, attribute="description")[0]
+        text = text.replace("\\n", "\n")
+        edit_modal = i.Modal(
+            i.InputText(
+                style=i.TextStyles.PARAGRAPH,
+                label="Welch Volksentscheid wollt ihr verkünden?",
+                custom_id="text",
+                required=True,
+                value=text
+            ),
+            title="Abstimmung bearbeiten",
+            custom_id="mod_edit_voting"
+        )
+        await ctx.send_modal(edit_modal)
 
     @i.modal_callback("mod_edit_voting")
-    async def edit_voting_response(self, ctx: i.ModalContext, id: str, text: str):
-        try:
-            int(id)
-        except ValueError:
-            await ctx.send("Die ID hat ein fehlerhaftes Format!", ephemeral=True)
-            return
-        except BaseException as e:
-            await ctx.send(
-                f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
-            return
-        self.load_data()
-        if id not in self.data:
-            await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
-            return
-        if not self.data[id]["user_id"] == str(ctx.author.id):
-            await ctx.send("Du bist nicht berechtigt diese Abstimmung zu bearbeiten!",
-                           ephemeral=True)
-            return
+    async def edit_voting(self, ctx: i.ModalContext, text: str):
+        await ctx.defer(ephemeral=True)
+        id = self.transfer_data[int(ctx.author.id)]
+        message_id = db.get_data(
+            "votings", {"voting_id": id}, attribute="message_id")[0]
         voting_channel: i.GuildText = ctx.channel
-        voting_message: i.Message = await voting_channel.fetch_message(self.data[id]["message_id"])
+        voting_message: i.Message = await voting_channel.fetch_message(message_id)
         message_embed: i.Embed = voting_message.embeds[0]
-        text = message_embed.description if type(
-            text) is None or text == " " else text
         if "bearbeitet" not in text:
             text = text + "\n*bearbeitet*"
         message_embed.description = text
         server: i.Guild = ctx.guild
-        voting_role_to_ping: i.Role = server.get_role(
+        voting_role_to_ping: i.Role = await server.fetch_role(
             self.voting_role_to_ping_id)
         await voting_message.edit(content=voting_role_to_ping.mention, embeds=message_embed)
-        await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
+        db.update_data("votings", "description", text, {"voting_id": id})
+        await ctx.send("Die Abstimmung wurde bearbeitet.", ephemeral=True)
 
     @i.component_callback("delete_voting_menu")
     async def delete_voting(self, ctx: i.ComponentContext):
         id = ctx.values[0]
-        self.load_data()
-        if id not in self.data:
-            await ctx.send("Diese ID existiert nicht oder die Abstimmung ist vorbei!", ephemeral=True)
-            return
-        if not self.data[id]["user_id"] == str(ctx.author.id) and not self.user_is_privileged(ctx.author.roles):
-            await ctx.send("Du bist nicht berechtigt diese Abstimmung zu löschen!",
-                           ephemeral=True)
-            return
+        message_id = db.get_data(
+            "votings", {"voting_id": id}, attribute="message_id")[0]
         votings_channel: i.GuildText = ctx.channel
-        voting_message: i.Message = await votings_channel.fetch_message(self.data[id]["message_id"])
+        voting_message: i.Message = await votings_channel.fetch_message(message_id)
         await voting_message.delete()
-        del self.data[id]
-        self.save_data()
+        db.delete_data("votings", {"voting_id": id})
         await ctx.send("Die Abstimmung wurde gelöscht.", ephemeral=True)
 
     @i.component_callback("close_voting_menu")
     async def close_voting(self, ctx: i.ComponentContext):
         await ctx.defer(ephemeral=True)
-        self.load_data()
+        votings_channel: i.GuildText = ctx.channel
         for id in ctx.values:
-            votings_channel: i.GuildText = ctx.channel
-            voting_message: i.Message = await votings_channel.fetch_message(self.data[id]["message_id"])
+            message_id = db.get_data(
+                "votings", {"voting_id": int(id)}, attribute="message_id")[0]
+            voting_message: i.Message = await votings_channel.fetch_message(message_id)
             message_embed: i.Embed = self.evaluate_voting(voting_message)
             current_time_formatted = strftime("%d.%m. %H:%M")
             message_embed.description = "**Diese Abstimmung wurde vorzeitig beendet!**\n" \
                 + f"{ctx.user.username}, {current_time_formatted}" \
                 + "\n\n" + message_embed.description
             await voting_message.edit(embeds=message_embed)
-            del self.data[id]
-        self.save_data()
+            db.delete_data("votings", {"voting_id": int(id)})
         await ctx.edit(content="Die Abstimmungen wurden beendet.", components=[])
