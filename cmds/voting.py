@@ -1,7 +1,4 @@
 import configparser as cp
-import json
-import sys
-from os import makedirs, path
 from random import randint
 from time import localtime, sleep, strftime, time
 import database as db
