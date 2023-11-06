@@ -3,6 +3,7 @@ import json
 from os import makedirs, path
 from random import randint
 import database as db
+import sqlite3 as sql
 
 import interactions as i
 
@@ -14,10 +15,6 @@ class ShopCommand(i.Extension):
         self.client: i.Client = client
         self.refresh_config()
         self.refresh_components()
-        self.data_folder_path = "data/shop/"
-        self.data_file_path = self.data_folder_path + "shop.json"
-        self.data = {}
-        self.load_data()
 
     def refresh_config(self):
         with open('config.ini', 'r') as config_file:
@@ -59,35 +56,19 @@ class ShopCommand(i.Extension):
             style=i.ButtonStyle.DANGER
         )
 
-    def save_data(self):
-        with open(self.data_file_path, 'w+') as data_file:
-            json.dump(self.data, data_file, indent=4)
-
-    def load_data(self):
-        try:
-            with open(self.data_file_path, 'r') as data_file:
-                self.data = json.load(data_file)
-        except json.decoder.JSONDecodeError:
-            self.setup_data_file()
-        except FileNotFoundError:
-            self.setup_data_file()
-
-    def setup_data_file(self):
-        if not path.exists(self.data_folder_path):
-            makedirs(self.data_folder_path)
-        if not path.exists(self.data_file_path):
-            open(self.data_file_path, 'a').close()
-        self.data = {
-            "count": {},
-            "shops": {}
-        }
-        self.save_data()
+    @staticmethod
+    def get_identifiers() -> list[str]:
+        con = sql.connect("data.db")
+        cur = con.cursor()
+        cur.execute("SELECT shop_id FROM shops")
+        return [str(ident[0]) for ident in cur.fetchall()]
 
     def get_shop_ids_select_options(self, user_id: int, user_roles: list[int]) -> list[i.StringSelectOption]:
         options = []
         priviliged = self.user_is_privileged(user_roles)
         if priviliged:
-            shops = db.get_data("shops", fetch_all=True, attribute="shop_id, name")
+            shops = db.get_data("shops", fetch_all=True,
+                                attribute="shop_id, name")
             for shop in shops:
                 option = i.StringSelectOption(
                     label=shop[0],
@@ -192,7 +173,7 @@ class ShopCommand(i.Extension):
                 min_values=1,
                 max_values=len(options)
             )
-            await ctx.send("Bitte wähle eine Kategorie aus, nach der du suchen möchtest:", components=category_selectmenu, ephemeral=True)
+            await ctx.send("Bitte wähle die Kategorien aus, nach denen du suchen möchtest:", components=category_selectmenu, ephemeral=True)
 
     @ i.component_callback("shop_delete_id_select")
     async def shop_delete_id_select(self, ctx: i.ComponentContext):
@@ -209,12 +190,13 @@ class ShopCommand(i.Extension):
                 db.update_data("users", "shop_count", count - 1,
                                {"user_id": int(ctx.author.id)})
             db.delete_data("shops", {"shop_id": int(shop_id)})
-        await ctx.edit(content="Die Shops wurden gelöscht.", components=[])
+        await ctx.send(content="Die Shops wurden gelöscht.", ephemeral=True)
 
     @ i.component_callback("shop_edit_id_select")
     async def shop_edit_id_select(self, ctx: i.ComponentContext):
-        # NOTE Hier warst du
         shop_id = ctx.values[0]
+        shop = db.get_data(
+            "shops", {"shop_id": int(shop_id)}, attribute="name, offer, location, dm_description")
         components = [
             i.InputText(
                 custom_id="id",
@@ -225,7 +207,7 @@ class ShopCommand(i.Extension):
             ),
             i.InputText(
                 custom_id="name",
-                value=self.data["shops"][shop_id]["name"],
+                value=shop[0],
                 label="Name",
                 style=i.TextStyles.SHORT,
                 placeholder="Name",
@@ -239,7 +221,7 @@ class ShopCommand(i.Extension):
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
                 max_length=250,
-                value=self.data["shops"][shop_id]["offer"]
+                value=shop[1]
             ),
             i.InputText(
                 label="Ort",
@@ -248,7 +230,7 @@ class ShopCommand(i.Extension):
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
                 max_length=100,
-                value=self.data["shops"][shop_id]["location"]
+                value=shop[2]
             ),
             i.InputText(
                 label="DM-Beschreibung",
@@ -257,7 +239,7 @@ class ShopCommand(i.Extension):
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
                 max_length=150,
-                value=self.data["shops"][shop_id]["dm_description"]
+                value=shop[3]
             )
         ]
         shop_modal = i.Modal(
@@ -269,8 +251,16 @@ class ShopCommand(i.Extension):
 
     @ i.modal_callback("shop_edit_modal")
     async def shop_edit_modal(self, ctx: i.ComponentContext, id: str, name: str, offer: str, location: str, dm_description: str):
-        if id in self.data["shops"]:
-            shop_message = await ctx.channel.fetch_message(self.data["shops"][id]["message_id"])
+        shop = db.get_data(
+            "shops", {"shop_id": int(id)}, attribute="user_id, message_id")
+        if shop is None:
+            await ctx.edit("Du hast die ID verändert... Warum bist du so?")
+            return
+        elif int(shop[0]) != int(ctx.author.id):
+            await ctx.edit("Du kannst nur deine eigenen Shops bearbeiten!")
+            return
+        else:
+            shop_message = await ctx.channel.fetch_message(shop[1])
             shop_embed: i.Embed = shop_message.embeds[0]
             shop_embed.fields[0] = i.EmbedField(
                 name="Name", value=name, inline=False)
@@ -279,22 +269,26 @@ class ShopCommand(i.Extension):
             shop_embed.fields[2] = i.EmbedField(
                 name="Ort", value=location, inline=False)
             shop_message = await shop_message.edit(embeds=shop_embed)
-            self.data["shops"][id]["name"] = name
-            self.data["shops"][id]["offer"] = offer
-            self.data["shops"][id]["location"] = location
-            self.data["shops"][id]["dm_description"] = dm_description
-            self.save_data()
-            await ctx.send("Dein Shop wurde erfolgreich bearbeitet!", ephemeral=True)
-        else:
-            await ctx.edit("Du hast die ID verändert... Warum bist du so?")
+            db.update_data("shops", "name", name, {"shop_id": int(id)})
+            db.update_data("shops", "offer", offer, {"shop_id": int(id)})
+            db.update_data("shops", "location", location, {"shop_id": int(id)})
+            db.update_data(
+                "shops", "dm_description", dm_description, {"shop_id": int(id)})
+            await ctx.send("Der Shop wurde erfolgreich bearbeitet!", ephemeral=True)
 
     @ i.component_callback("categorie_select")
     async def categorie_select(self, ctx: i.ComponentContext):
         value = ctx.values
-        if not str(ctx.author.id) in self.data["count"]:
-            self.data["count"][str(ctx.author.id)] = 0
-        elif not value[0] in self.categories_excluded_from_limit:
-            if self.data["count"][str(ctx.author.id)] >= self.count_limit:
+        shop_count = db.get_data(
+            "users", {"user_id": int(ctx.author.id)}, attribute="shop_count")
+        if shop_count is None:
+            db.save_data("users", "user_id, shop_count",
+                         (int(ctx.author.id), 0))
+            shop_count = 0
+        else:
+            shop_count = shop_count[0]
+        if not value[0] in self.categories_excluded_from_limit:
+            if shop_count >= self.count_limit:
                 try:
                     del self.transfer_data[int(ctx.author.id)]
                 except KeyError:
@@ -351,17 +345,9 @@ class ShopCommand(i.Extension):
     @ i.modal_callback("shop_create")
     async def mod_shop_create(self, ctx: i.SlashContext, name: str, offer: str, location: str, dm_description: str):
         identifier = str(randint(1000, 9999))
-        while identifier in self.data["shops"]:
+        identifiers = self.get_identifiers()
+        while identifier in identifiers:
             identifier = str(randint(1000, 9999))
-        self.data["shops"][identifier] = {
-            "name": name,
-            "offer": offer,
-            "location": location,
-            "dm_description": dm_description,
-            "categorie": self.transfer_data[int(ctx.author.id)]["categorie"],
-            "owner": str(ctx.author.id),
-            "approved": False
-        }
         shop_embed = i.Embed(
             title=name,
             description=f"""|| *{self.transfer_data[int(ctx.author.id)]["categorie"]}* ||\n""",
@@ -374,10 +360,13 @@ class ShopCommand(i.Extension):
             name="Besitzer", value=ctx.author.user.username, inline=False)
         shop_embed.add_field(name="Genehmigt", value=":x:", inline=False)
         sent_message = await ctx.channel.send(embeds=shop_embed)
-        self.data["shops"][identifier]["message_id"] = str(sent_message.id)
+        db.save_data("shops", "shop_id, user_id, name, offer, location, dm_description, category, message_id, approved", (identifier, int(
+            ctx.author.id), name, offer, location, dm_description, self.transfer_data[int(ctx.author.id)]["categorie"], int(sent_message.id), False))
         if not self.transfer_data[int(ctx.author.id)]["categorie"] in self.categories_excluded_from_limit:
-            self.data["count"][str(ctx.author.id)] += 1
-        self.save_data()
+            count = db.get_data("users", {"user_id": int(
+                ctx.author.id)}, attribute="shop_count")[0]
+            db.update_data("users", "shop_count", count + 1,
+                           {"user_id": int(ctx.author.id)})
         del self.transfer_data[int(ctx.author.id)]
         await ctx.send("Shop erstellt.", ephemeral=True)
 
@@ -402,16 +391,17 @@ class ShopCommand(i.Extension):
         await ctx.defer(ephemeral=True)
         if aktion == "approve":
             options = []
-            for shop in self.data["shops"]:
-                if not self.data["shops"][shop]["approved"]:
-                    options.append(i.StringSelectOption(
-                        label=shop,
-                        description=self.data["shops"][shop]["name"],
-                        value=shop
-                    ))
-            if len(options) == 0:
+            shops = db.get_data("shops", {"approved": False}, fetch_all=True,
+                                attribute="shop_id, name")
+            if shops == []:
                 await ctx.send("Es gibt keine Shops, die noch nicht genehmigt wurden.", ephemeral=True)
                 return
+            for shop in shops:
+                options.append(i.StringSelectOption(
+                    label=shop[0],
+                    description=shop[1],
+                    value=shop[0]
+                ))
             shop_approve_select_menu = i.StringSelectMenu(
                 custom_id="shop_approve_id_select",
                 placeholder="Wähle die Shops aus die du genehmigen möchtest.",
@@ -422,16 +412,17 @@ class ShopCommand(i.Extension):
             await ctx.send(components=[shop_approve_select_menu], ephemeral=True)
         elif aktion == "deny":
             options = []
-            for shop in self.data["shops"]:
-                if self.data["shops"][shop]["approved"]:
-                    options.append(i.StringSelectOption(
-                        label=shop,
-                        description=self.data["shops"][shop]["name"],
-                        value=shop
-                    ))
-            if len(options) == 0:
-                await ctx.send("Es gibt keine Shops, die genehmigt wurden.", ephemeral=True)
+            shops = db.get_data("shops", {"approved": True}, fetch_all=True,
+                                attribute="shop_id, name")
+            if shops == []:
+                await ctx.send("Es gibt keine genehmigten Shops.", ephemeral=True)
                 return
+            for shop in shops:
+                options.append(i.StringSelectOption(
+                    label=shop[0],
+                    description=shop[1],
+                    value=shop[0]
+                ))
             shop_deny_select_menu = i.StringSelectMenu(
                 custom_id="shop_deny_id_select",
                 placeholder="Wähle die Shops aus die du ablehnen möchtest.",
@@ -444,27 +435,31 @@ class ShopCommand(i.Extension):
     @ i.component_callback("shop_approve_id_select")
     async def shop_approve_id_select(self, ctx: i.ComponentContext):
         await ctx.defer(ephemeral=True)
-        for shop in ctx.values:
-            self.data["shops"][shop]["approved"] = True
-            shop_message = await ctx.channel.fetch_message(int(self.data["shops"][shop]["message_id"]))
+        for shop_id in ctx.values:
+            shop = db.get_data(
+                "shops", {"shop_id": int(shop_id)}, attribute="shop_id, message_id")
+            db.update_data("shops", "approved", True,
+                           {"shop_id": int(shop_id)})
+            shop_message = await ctx.channel.fetch_message(int(shop[1]))
             shop_embed = shop_message.embeds[0]
             shop_embed.fields[3] = i.EmbedField(
                 name="Genehmigt", value=":white_check_mark:", inline=False)
             await shop_message.edit(embeds=[shop_embed])
-        self.save_data()
         await ctx.send("Shop(s) genehmigt.", ephemeral=True)
 
     @ i.component_callback("shop_deny_id_select")
     async def shop_deny_id_select(self, ctx: i.ComponentContext):
         await ctx.defer(ephemeral=True)
-        for shop in ctx.values:
-            self.data["shops"][shop]["approved"] = False
-            shop_message = await ctx.channel.fetch_message(int(self.data["shops"][shop]["message_id"]))
+        for shop_id in ctx.values:
+            shop = db.get_data(
+                "shops", {"shop_id": int(shop_id)}, attribute="shop_id, message_id")
+            db.update_data("shops", "approved", False,
+                           {"shop_id": int(shop_id)})
+            shop_message = await ctx.channel.fetch_message(int(shop[1]))
             shop_embed = shop_message.embeds[0]
             shop_embed.fields[3] = i.EmbedField(
                 name="Genehmigt", value=":x:", inline=False)
             await shop_message.edit(embeds=[shop_embed])
-        self.save_data()
         await ctx.send("Shop(s) abgelehnt.", ephemeral=True)
 
     @i.component_callback("shop_search_category_select")
@@ -476,12 +471,13 @@ class ShopCommand(i.Extension):
             description="Hier findest du alle Shops die den Kategorien entsprechen.",
             color=0xdaa520
         )
-        for shop in self.data["shops"]:
-            if self.data["shops"][shop]["categorie"] in value and self.data["shops"][shop]["approved"]:
-                shops_embed.add_field(
-                    name=self.data["shops"][shop]["name"],
-                    value=f"""|| *{self.data["shops"][shop]["categorie"]}* ||\n{self.data["shops"][shop]["dm_description"]}""",
-                    inline=False
-                )
+        shops = db.get_data("shops", {"category": value, "approved": True}, fetch_all=True,
+                            attribute="name, category, dm_description")
+        for shop in shops:
+            shops_embed.add_field(
+                name=shop[0],
+                value=f"""|| *{shop[1]}* ||\n{shop[2]}""",
+                inline=False
+            )
         await ctx.author.send(embeds=[shops_embed])
         await ctx.edit(content="Bitte schaue in deine DMs!", components=[])
