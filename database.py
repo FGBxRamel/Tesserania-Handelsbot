@@ -15,8 +15,20 @@ def get_data(table: str, *conditions: dict, attribute: str = '*', fetch_all: boo
     else:
         conditions = conditions[0]
         statement = f"SELECT {attribute} FROM {table} WHERE "
+        delete_attr = []
         for attr in conditions:
-            statement += f"{attr} = ? AND "
+            if type(conditions[attr]) is list:
+                # This is bad. To avoid serious injury, stop looking at this.
+                statement += f"{attr} IN ("
+                for value in conditions[attr]:
+                    statement += f"""'{value}', """
+                statement = statement[:-2]
+                statement += ") AND "
+                delete_attr.append(attr)
+            else:
+                statement += f"{attr} = ? AND "
+        for attr in delete_attr:
+            del conditions[attr]
         statement = statement[:-5]
         cur.execute(statement, tuple(conditions.values()))
     if fetch_all:
