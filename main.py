@@ -7,20 +7,25 @@ import sqlite3 as sql
 
 import interactions as i
 
+# TODO Make config section per feature
+
 
 def setup_database(file: str = "data.db"):
     with sql.connect(file) as conn:
         c = conn.cursor()
         c.execute(
-            "CREATE TABLE IF NOT EXISTS offers (offer_id INTEGER PRIMARY KEY, title TEXT,\
-            user_id BIGINT, message_id BIGINT, deadline FLOAT,\
+            "CREATE TABLE IF NOT EXISTS offers (offer_id INTEGER PRIMARY KEY, user_id BIGINT\
+            title TEXT, message_id BIGINT, deadline FLOAT,\
             description TEXT, price TEXT, FOREIGN KEY(user_id) REFERENCES users(user_id))")
         c.execute("CREATE TABLE IF NOT EXISTS users (user_id BIGINT PRIMARY KEY,\
-            offers_count INTEGER)")
+            offers_count INTEGER, shop_count INTEGER)")
         c.execute("CREATE TABLE IF NOT EXISTS votings (voting_id INTEGER PRIMARY KEY,\
                   user_id BIGINT, message_id BIGINT, deadline FLOAT,\
                   description TEXT, wait_time FLOAT, create_time FLOAT,\
                     FOREIGN KEY(user_id) REFERENCES users(user_id))")
+        c.execute("CREATE TABLE IF NOT EXISTS shops (shop_id INTEGER PRIMARY KEY,\
+                  user_id BIGINT, name TEXT, offer TEXT, location TEXT, dm_description TEXT,\
+                  category TEXT, approved BOOLEAN, message_id BIGINT, FOREIGN KEY(user_id) REFERENCES users(user_id))")
         conn.commit()
 
 
@@ -46,11 +51,12 @@ run = False
 
 open("data.json", "a").close()
 
+# NOTE Wichtel feature won't be supported anymore; it's there, but without support
 bot.load_extension("interactions.ext.jurigged")
 bot.load_extension("cmds.shop")
-bot.load_extension("cmds.wichteln")
-bot.load_extension("cmds.offer")
-bot.load_extension("cmds.voting")
+# bot.load_extension("cmds.wichteln")
+# bot.load_extension("cmds.offer")
+# bot.load_extension("cmds.voting")
 
 
 def json_dump(data_dict: dict) -> None:

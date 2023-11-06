@@ -2,6 +2,7 @@ import configparser as cp
 import json
 from os import makedirs, path
 from random import randint
+import database as db
 
 import interactions as i
 
@@ -82,15 +83,26 @@ class ShopCommand(i.Extension):
         }
         self.save_data()
 
-    def get_shop_ids_select_options(self, user_id: str, user_roles: list[int]) -> list[i.StringSelectOption]:
+    def get_shop_ids_select_options(self, user_id: int, user_roles: list[int]) -> list[i.StringSelectOption]:
         options = []
         priviliged = self.user_is_privileged(user_roles)
-        for shop_id, shop_data in self.data["shops"].items():
-            if shop_data["owner"] == user_id or priviliged:
+        if priviliged:
+            shops = db.get_data("shops", fetch_all=True, attribute="shop_id, name")
+            for shop in shops:
                 option = i.StringSelectOption(
-                    label=shop_id,
-                    value=str(shop_id),
-                    description=shop_data["name"]
+                    label=shop[0],
+                    value=str(shop[0]),
+                    description=shop[1]
+                )
+                options.append(option)
+        else:
+            shops = db.get_data("shops", {"user_id": int(
+                user_id)}, fetch_all=True, attribute="shop_id, name")
+            for shop in shops:
+                option = i.StringSelectOption(
+                    label=str(shop[0]),
+                    value=str(shop[0]),
+                    description=shop[1]
                 )
                 options.append(option)
         return options
@@ -149,7 +161,7 @@ class ShopCommand(i.Extension):
                 sent_message.id)
         elif aktion == "edit":
             options = self.get_shop_ids_select_options(
-                str(ctx.user.id), ctx.member.roles)
+                int(ctx.user.id), ctx.member.roles)
             shop_ids_selectmenu = i.StringSelectMenu(
                 custom_id="shop_edit_id_select",
                 placeholder="Shop-ID",
@@ -158,7 +170,7 @@ class ShopCommand(i.Extension):
             await ctx.send("Bitte wähle einen Shop aus, den du bearbeiten möchtest:", components=shop_ids_selectmenu, ephemeral=True)
         elif aktion == "delete":
             options = self.get_shop_ids_select_options(
-                str(ctx.user.id), ctx.member.roles)
+                int(ctx.user.id), ctx.member.roles)
             if len(options) == 0:
                 await ctx.send("Du hast keine Shops, die du löschen könntest!", ephemeral=True)
                 return
@@ -185,16 +197,23 @@ class ShopCommand(i.Extension):
     @ i.component_callback("shop_delete_id_select")
     async def shop_delete_id_select(self, ctx: i.ComponentContext):
         for shop_id in ctx.values:
-            shop_message = await ctx.channel.fetch_message(self.data["shops"][shop_id]["message_id"])
+            message_id = db.get_data(
+                "shops", {"shop_id": int(shop_id)}, attribute="message_id")[0]
+            shop_message = await ctx.channel.fetch_message(message_id)
             await shop_message.delete()
-            if not self.data["shops"][shop_id]["categorie"] in self.categories_excluded_from_limit:
-                self.data["count"][str(ctx.author.id)] -= 1
-            del self.data["shops"][shop_id]
-        self.save_data()
+            category = db.get_data(
+                "shops", {"shop_id": int(shop_id)}, attribute="category")[0]
+            if not category in self.categories_excluded_from_limit:
+                count = db.get_data("users", {"user_id": int(
+                    ctx.author.id)}, attribute="shop_count")[0]
+                db.update_data("users", "shop_count", count - 1,
+                               {"user_id": int(ctx.author.id)})
+            db.delete_data("shops", {"shop_id": int(shop_id)})
         await ctx.edit(content="Die Shops wurden gelöscht.", components=[])
 
     @ i.component_callback("shop_edit_id_select")
     async def shop_edit_id_select(self, ctx: i.ComponentContext):
+        # NOTE Hier warst du
         shop_id = ctx.values[0]
         components = [
             i.InputText(
