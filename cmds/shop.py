@@ -282,8 +282,8 @@ class ShopCommand(i.Extension):
         shop_count = db.get_data(
             "users", {"user_id": int(ctx.author.id)}, attribute="shop_count")
         if shop_count is None:
-            db.save_data("users", "user_id, shop_count",
-                         (int(ctx.author.id), 0))
+            db.save_data("users", "user_id, offer_count, shop_count",
+                         (int(ctx.author.id), 0, 0))
             shop_count = 0
         else:
             shop_count = shop_count[0]

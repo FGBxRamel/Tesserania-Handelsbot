@@ -65,12 +65,16 @@ class OfferCommand(i.Extension):
     async def offer(self, ctx: i.SlashContext, aktion: str):
         if aktion == "create":
             if db.get_data("users", {"user_id": str(ctx.author.id)}) is None:
-                db.save_data("users", "user_id, offers_count",
-                             (int(ctx.author.id), 0))
+                db.save_data("users", "user_id, offers_count, shop_count",
+                             (int(ctx.author.id), 0, 0))
 
             offer_count = db.get_data(
                 "users", {"user_id": int(ctx.author.id)}, attribute="offers_count")[0]
-            if int(offer_count) >= 3:
+            if offer_count is None:
+                offer_count = 0
+                db.save_data("users", "user_id, offers_count, shop_count",
+                             (int(ctx.author.id), 0, 0))
+            elif int(offer_count) >= 3:
                 await ctx.send("Du hast bereits 3 Angebote erstellt.", ephemeral=True)
                 return
 
