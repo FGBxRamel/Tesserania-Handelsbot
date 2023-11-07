@@ -473,10 +473,11 @@ class ShopCommand(i.Extension):
         )
         shops = db.get_data("shops", {"category": value, "approved": True}, fetch_all=True,
                             attribute="name, category, dm_description")
-        for shop in shops:
+        for name, category, dm_description in shops:
+            dm_description = dm_description.replace("\\n", "\n")
             shops_embed.add_field(
-                name=shop[0],
-                value=f"""|| *{shop[1]}* ||\n{shop[2]}""",
+                name=name,
+                value=f"""|| *{category}* ||\n{dm_description}""",
                 inline=False
             )
         await ctx.author.send(embeds=[shops_embed])
