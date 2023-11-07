@@ -1,6 +1,4 @@
 import configparser as cp
-import json
-from os import makedirs, path
 from random import randint
 import database as db
 import sqlite3 as sql
@@ -256,25 +254,24 @@ class ShopCommand(i.Extension):
         if shop is None:
             await ctx.edit("Du hast die ID verändert... Warum bist du so?")
             return
-        elif int(shop[0]) != int(ctx.author.id):
+        if int(shop[0]) != int(ctx.author.id):
             await ctx.edit("Du kannst nur deine eigenen Shops bearbeiten!")
             return
-        else:
-            shop_message = await ctx.channel.fetch_message(shop[1])
-            shop_embed: i.Embed = shop_message.embeds[0]
-            shop_embed.fields[0] = i.EmbedField(
-                name="Name", value=name, inline=False)
-            shop_embed.fields[1] = i.EmbedField(
-                name="Angebot", value=offer, inline=False)
-            shop_embed.fields[2] = i.EmbedField(
-                name="Ort", value=location, inline=False)
-            shop_message = await shop_message.edit(embeds=shop_embed)
-            db.update_data("shops", "name", name, {"shop_id": int(id)})
-            db.update_data("shops", "offer", offer, {"shop_id": int(id)})
-            db.update_data("shops", "location", location, {"shop_id": int(id)})
-            db.update_data(
-                "shops", "dm_description", dm_description, {"shop_id": int(id)})
-            await ctx.send("Der Shop wurde erfolgreich bearbeitet!", ephemeral=True)
+        shop_message = await ctx.channel.fetch_message(shop[1])
+        shop_embed: i.Embed = shop_message.embeds[0]
+        shop_embed.fields[0] = i.EmbedField(
+            name="Name", value=name, inline=False)
+        shop_embed.fields[1] = i.EmbedField(
+            name="Angebot", value=offer, inline=False)
+        shop_embed.fields[2] = i.EmbedField(
+            name="Ort", value=location, inline=False)
+        shop_message = await shop_message.edit(embeds=shop_embed)
+        db.update_data("shops", "name", name, {"shop_id": int(id)})
+        db.update_data("shops", "offer", offer, {"shop_id": int(id)})
+        db.update_data("shops", "location", location, {"shop_id": int(id)})
+        db.update_data(
+            "shops", "dm_description", dm_description, {"shop_id": int(id)})
+        await ctx.send("Der Shop wurde erfolgreich bearbeitet!", ephemeral=True)
 
     @ i.component_callback("categorie_select")
     async def categorie_select(self, ctx: i.ComponentContext):
@@ -287,15 +284,17 @@ class ShopCommand(i.Extension):
             shop_count = 0
         else:
             shop_count = shop_count[0]
-        if not value[0] in self.categories_excluded_from_limit:
-            if shop_count >= self.count_limit:
-                try:
-                    del self.transfer_data[int(ctx.author.id)]
-                except KeyError:
-                    await ctx.edit("Ein Fehler ist aufgetreten. Bitte benutze eine Nachricht nicht zweimal!", components=[])
-                    return
-                await ctx.edit("Du hast bereits die maximale Anzahl an Shops erreicht.", components=[])
+        if (
+            not value[0] in self.categories_excluded_from_limit
+            and shop_count >= self.count_limit
+        ):
+            try:
+                del self.transfer_data[int(ctx.author.id)]
+            except KeyError:
+                await ctx.edit("Ein Fehler ist aufgetreten. Bitte benutze eine Nachricht nicht zweimal!", components=[])
                 return
+            await ctx.edit("Du hast bereits die maximale Anzahl an Shops erreicht.", components=[])
+            return
         try:
             self.transfer_data[int(ctx.author.id)]["categorie"] = value[0]
         except KeyError:

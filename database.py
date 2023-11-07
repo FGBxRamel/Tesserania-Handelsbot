@@ -52,8 +52,7 @@ def get_data(table: str, *conditions: dict, attribute: str = '*', fetch_all: boo
         cur.execute(statement, tuple(conditions.values()))
     if fetch_all:
         return cur.fetchall()
-    else:
-        return cur.fetchone()
+    return cur.fetchone()
 
 
 def save_data(table: str, attributes: str, values: tuple) -> None:
