@@ -3,6 +3,25 @@ import sqlite3 as sql
 # Beware: All of this is not sufficient to stop SQL injection, but enough for this bot
 
 
+def setup(file: str = "data.db"):
+    with sql.connect(file) as conn:
+        c = conn.cursor()
+        c.execute(
+            "CREATE TABLE IF NOT EXISTS offers (offer_id INTEGER PRIMARY KEY, user_id BIGINT,\
+            title TEXT, message_id BIGINT, deadline FLOAT,\
+            description TEXT, price TEXT, FOREIGN KEY(user_id) REFERENCES users(user_id))")
+        c.execute("CREATE TABLE IF NOT EXISTS users (user_id BIGINT PRIMARY KEY,\
+            offers_count INTEGER, shop_count INTEGER)")
+        c.execute("CREATE TABLE IF NOT EXISTS votings (voting_id INTEGER PRIMARY KEY,\
+                  user_id BIGINT, message_id BIGINT, deadline FLOAT,\
+                  description TEXT, wait_time FLOAT, create_time FLOAT,\
+                    FOREIGN KEY(user_id) REFERENCES users(user_id))")
+        c.execute("CREATE TABLE IF NOT EXISTS shops (shop_id INTEGER PRIMARY KEY,\
+                  user_id BIGINT, name TEXT, offer TEXT, location TEXT, dm_description TEXT,\
+                  category TEXT, approved BOOLEAN, message_id BIGINT, FOREIGN KEY(user_id) REFERENCES users(user_id))")
+        conn.commit()
+
+
 def get_data(table: str, *conditions: dict, attribute: str = '*', fetch_all: bool = False) -> list[tuple] | tuple | None:
     """Returns data from the database. If fetch_all is True, it returns a list of tuples, 
     else a single tuple or None if no entry is found."""
