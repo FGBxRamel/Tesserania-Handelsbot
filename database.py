@@ -23,7 +23,7 @@ def setup(file: str = "data.db"):
 
 
 def get_data(table: str, *conditions: dict, attribute: str = '*', fetch_all: bool = False) -> list[tuple] | tuple | None:
-    """Returns data from the database. If fetch_all is True, it returns a list of tuples, 
+    """Returns data from the database. If fetch_all is True, it returns a list of tuples,
     else a single tuple or None if no entry is found."""
     con = sql.connect("data.db")
     cur = con.cursor()
@@ -60,7 +60,7 @@ def save_data(table: str, attributes: str, values: tuple) -> None:
     """Saves data to the database."""
     table = table.replace(';', '')
     attributes = attributes.replace(';', '')
-    safer_values = (i.replace(";", "") for i in values)
+    values = (i.replace(";", "") for i in values)
     con = sql.connect("data.db")
     cur = con.cursor()
     statement = f"INSERT INTO {table} ({attributes}) VALUES {values}"

@@ -184,7 +184,7 @@ class ShopCommand(i.Extension):
             await shop_message.delete()
             category = db.get_data(
                 "shops", {"shop_id": int(shop_id)}, attribute="category")[0]
-            if not category in self.categories_excluded_from_limit:
+            if category not in self.categories_excluded_from_limit:
                 count = db.get_data("users", {"user_id": int(
                     ctx.author.id)}, attribute="shop_count")[0]
                 db.update_data("users", "shop_count", count - 1,
