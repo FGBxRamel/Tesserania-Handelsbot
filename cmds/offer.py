@@ -235,7 +235,7 @@ class OfferCommand(i.Extension):
                 label="Text",
                 custom_id="text",
                 required=True,
-                value=text
+                value=text.replace("\\n", "\n")
             ),
             i.InputText(
                 style=i.TextStyles.SHORT,
