@@ -129,6 +129,6 @@ dmypy.json
 .pyre/
 
 # Own
-data.json
 config.ini
-data/
+data*
+!database.py

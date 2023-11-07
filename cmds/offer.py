@@ -1,8 +1,8 @@
 import configparser as cp
-import json
-from os import makedirs, path
 from time import strftime, time, localtime
 from random import randint
+import sqlite3 as sql
+import database as db
 
 import interactions as i
 
@@ -12,11 +12,7 @@ scope_ids = []
 class OfferCommand(i.Extension):
     def __init__(self, client) -> None:
         self.client = client
-        self.data_folder_path = 'data/offer/'
-        self.data_file_path = self.data_folder_path + 'offer.json'
-        self.data = {}
         self.refresh_config()
-        self.setup_data()
 
     def refresh_config(self):
         with open('config.ini', 'r') as config_file:
@@ -29,46 +25,15 @@ class OfferCommand(i.Extension):
             self.role_to_ping_id = config.getint(
                 'IDs', 'voting_role_to_ping')
 
-    def save_data(self):
-        with open(self.data_file_path, 'w+') as data_file:
-            json.dump(self.data, data_file, indent=4)
-
-    def load_data(self):
-        with open(self.data_file_path, 'r') as data_file:
-            self.data = json.load(data_file)
-
-    def setup_data(self):
-        def create_data_file():
-            open(self.data_file_path, 'a').close()
-            self.data = {
-                "offers": {},
-                "count": {}
-            }
-            self.save_data()
-        if not path.exists(self.data_folder_path):
-            makedirs(self.data_folder_path)
-        if path.exists(self.data_file_path):
-            try:
-                self.load_data()
-            except json.decoder.JSONDecodeError:
-                create_data_file()
-        else:
-            create_data_file()
-        with open("data.json", "r") as data_file:
-            try:
-                transfer_data = json.load(data_file)
-            except json.decoder.JSONDecodeError as e:
-                print(e)
-                transfer_data = {}
-        with open("data.json", "w") as data_file:
-            # Do it so the main file knows where the offers are stored
-            transfer_data["offer"] = {
-                "data_file": self.data_file_path,
-            }
-            json.dump(transfer_data, data_file, indent=4)
-
     def user_is_privileged(self, roles: list[int]) -> bool:
         return any(role in self.privileged_roles_ids for role in roles)
+
+    @staticmethod
+    def get_identifiers() -> list[str]:
+        con = sql.connect("data.db")
+        cur = con.cursor()
+        cur.execute("SELECT offer_id FROM offers")
+        return [str(ident[0]) for ident in cur.fetchall()]
 
     @i.slash_command(
         name="angebot",
@@ -99,11 +64,20 @@ class OfferCommand(i.Extension):
     )
     async def offer(self, ctx: i.SlashContext, aktion: str):
         if aktion == "create":
-            if not str(ctx.author.id) in self.data["count"]:
-                self.data["count"][str(ctx.author.id)] = 0
-            elif self.data["count"][str(ctx.author.id)] >= 3:
-                await ctx.send("Es dürfen maximal drei Waren angeboten werden.", ephemeral=True)
+            if db.get_data("users", {"user_id": str(ctx.author.id)}) is None:
+                db.save_data("users", "user_id, offers_count, shop_count",
+                             (int(ctx.author.id), 0, 0))
+
+            offer_count = db.get_data(
+                "users", {"user_id": int(ctx.author.id)}, attribute="offers_count")[0]
+            if offer_count is None:
+                offer_count = 0
+                db.save_data("users", "user_id, offers_count, shop_count",
+                             (int(ctx.author.id), 0, 0))
+            elif int(offer_count) >= 3:
+                await ctx.send("Du hast bereits 3 Angebote erstellt.", ephemeral=True)
                 return
+
             components = [
                 i.InputText(
                     style=i.TextStyles.SHORT,
@@ -140,13 +114,22 @@ class OfferCommand(i.Extension):
         elif aktion == "delete":
             priviledged = self.user_is_privileged(ctx.author.roles)
             options = []
-            for offer_id, offer_data in self.data["offers"].items():
-                if offer_data["user_id"] == str(ctx.author.id) or priviledged:
+            if not priviledged:
+                for offer in db.get_data("offers", {"user_id": str(ctx.author.id)}, attribute="offer_id, title", fetch_all=True):
                     options.append(
                         i.StringSelectOption(
-                            label=offer_id,
-                            value=offer_id,
-                            description=offer_data["title"]
+                            label=offer[0],
+                            value=offer[0],
+                            description=offer[1]
+                        )
+                    )
+            else:
+                for offer in db.get_data("offers", attribute="offer_id, title", fetch_all=True):
+                    options.append(
+                        i.StringSelectOption(
+                            label=offer[0],
+                            value=offer[0],
+                            description=offer[1]
                         )
                     )
             if len(options) == 0:
@@ -162,12 +145,12 @@ class OfferCommand(i.Extension):
             await ctx.send("Wähle die Angebote aus, die du löschen möchtest.", components=delete_selectmenu, ephemeral=True)
         elif aktion == "edit":
             options = []
-            for offer_id, offer_data in self.data["offers"].items():
+            for offer in db.get_data("offers", {"user_id": str(ctx.author.id)}, attribute="offer_id, title", fetch_all=True):
                 options.append(
                     i.StringSelectOption(
-                        label=offer_id,
-                        value=offer_id,
-                        description=offer_data["title"]
+                        label=offer[0],
+                        value=offer[0],
+                        description=offer[1]
                     )
                 )
             if len(options) == 0:
@@ -184,24 +167,19 @@ class OfferCommand(i.Extension):
 
     @i.modal_callback("mod_create_offer")
     async def create_offer_respone(self, ctx: i.SlashContext, title: str, price: str, text: str, deadline: str):
+        identifier_list = self.get_identifiers()
         identifier = randint(1000, 9999)
-        while identifier in self.data["offers"]:
+        while identifier in identifier_list:
             identifier = randint(1000, 9999)
-        self.data["offers"][str(identifier)] = {
-            "title": str(title),
-            "user_id": str(ctx.author.id),
-            "price": str(price),
-            "text": str(text)
-        }
+
         if int(deadline) < 1:
             deadline = 1
         elif int(deadline) > 7:
             deadline = 7
         # The deadline is: current_time_seconds_epoch + x * seconds_of_one_day
-        end_time = time() + int(deadline) * 86400
-        self.data["offers"][str(identifier)]["deadline"] = end_time
+        numeric_end_time = time() + int(deadline) * 86400
         end_time = strftime("%d.%m.") + "- " + \
-            strftime("%d.%m.", localtime(end_time))
+            strftime("%d.%m.", localtime(numeric_end_time))
         app_embed = i.Embed(
             title=title,
             description=f"\n{text}\n\n**Preis:** {price}",
@@ -215,14 +193,13 @@ class OfferCommand(i.Extension):
         role_to_ping: i.Role = server.get_role(
             self.role_to_ping_id)
         sent_message = await channel.send(content=role_to_ping.mention, embeds=app_embed)
-        self.data["offers"][str(identifier)]["message_id"] = str(
-            sent_message.id)
-        try:
-            self.data["count"][str(ctx.author.id)
-                               ] = self.data["count"][str(ctx.author.id)] + 1
-        except KeyError:
-            self.data["count"][str(ctx.author.id)] = 1
-        self.save_data()
+
+        db.save_data("offers", "offer_id, title, user_id, price, description, deadline, message_id",
+                     (identifier, title, int(ctx.author.id), price, text, numeric_end_time, int(sent_message.id)))
+        offer_count = int(db.get_data(
+            "users", {"user_id": int(ctx.author.id)}, attribute="offers_count")[0])
+        db.update_data("users", "offers_count", offer_count +
+                       1, {"user_id": int(ctx.author.id)})
         await ctx.send("Das Angebot wurde entgegen genommen.", ephemeral=True)
 
     @i.component_callback("delete_offer_menu")
@@ -230,31 +207,35 @@ class OfferCommand(i.Extension):
         await ctx.defer(ephemeral=True)
         offer_channel: i.GuildText = ctx.channel
         for id in ctx.values:
-            offer_message: i.Message = await offer_channel.fetch_message(self.data["offers"][id]["message_id"])
+            message_id = db.get_data(
+                "offers", {"offer_id": id}, attribute="message_id")[0]
+            offer_message: i.Message = await offer_channel.fetch_message(message_id)
             await offer_message.delete()
-            del self.data["offers"][id]
-            self.data["count"][str(ctx.author.id)
-                               ] = self.data["count"][str(ctx.author.id)] - 1
-        self.save_data()
+            db.delete_data("offers", {"offer_id": id})
+            offer_count = int(db.get_data(
+                "users", {"user_id": int(ctx.author.id)}, attribute="offers_count")[0])
+            db.update_data("users", "offers_count", offer_count - 1,
+                           {"user_id": int(ctx.author.id)})
         await ctx.send("Die Angebote wurden gelöscht.", ephemeral=True)
 
     @i.component_callback("edit_offer_menu")
     async def edit_offer_response(self, ctx: i.ComponentContext):
-        ids = ctx.values
+        title, text = db.get_data(
+            "offers", {"offer_id": ctx.values[0]}, attribute="title, description", fetch_all=True)[0]
         components = [
             i.InputText(
                 style=i.TextStyles.SHORT,
                 label="Titel",
                 custom_id="title",
                 required=True,
-                value=self.data["offers"][ids[0]]["title"]
+                value=title
             ),
             i.InputText(
                 style=i.TextStyles.PARAGRAPH,
                 label="Text",
                 custom_id="text",
                 required=True,
-                value=self.data["offers"][ids[0]]["text"]
+                value=text.replace("\\n", "\n")
             ),
             i.InputText(
                 style=i.TextStyles.SHORT,
@@ -262,7 +243,7 @@ class OfferCommand(i.Extension):
                 custom_id="id",
                 required=True,
                 max_length=4,
-                value=ids[0]
+                value=ctx.values[0]
             )
         ]
         edit_modal = i.Modal(
@@ -283,21 +264,25 @@ class OfferCommand(i.Extension):
             await ctx.send(
                 f"Oops, etwas ist schief gegangen! Fehler: {e}", ephemeral=True)
             return
-        if id not in self.data["offers"]:
+
+        if id not in self.get_identifiers():
             await ctx.send("Diese ID existiert nicht!", ephemeral=True)
             return
-        if not self.data["offers"][id]["user_id"] == str(ctx.author.id):
+        offer_owner_id = db.get_data(
+            "offers", {"offer_id": id}, attribute="user_id")[0]
+        if str(offer_owner_id) != str(ctx.author.id):
             await ctx.send("Du bist nicht berechtigt dieses Angebot zu bearbeiten!",
                            ephemeral=True)
             return
-        self.data["offers"][id]["title"] = title
-        self.data["offers"][id]["text"] = text
+        message_id, price = db.get_data(
+            "offers", {"offer_id": id}, attribute="message_id, price", fetch_all=True)[0]
         offer_channel: i.GuildText = ctx.channel
-        offer_message: i.Message = await offer_channel.fetch_message(self.data["offers"][id]["message_id"])
+        offer_message: i.Message = await offer_channel.fetch_message(message_id)
         message_embed: i.Embed = offer_message.embeds[0]
-        text = f"{text}\n\n**Preis:** {self.data['offers'][id]['price']}\n*bearbeitet *"
+        edited_text = f"{text}\n\n**Preis:** {price}\n*bearbeitet *"
         message_embed.title = title
-        message_embed.description = text
+        message_embed.description = edited_text
         await offer_message.edit(embeds=message_embed)
-        self.save_data()
+        db.update_data("offers", "title", title, {"offer_id": id})
+        db.update_data("offers", "description", text, {"offer_id": id})
         await ctx.send("Das Angebot wurde bearbeitet.", ephemeral=True)
