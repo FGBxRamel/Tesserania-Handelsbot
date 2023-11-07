@@ -31,7 +31,6 @@ run = False
 # NOTE Wichtel feature won't be supported anymore; it's there, but without support
 bot.load_extension("interactions.ext.jurigged")
 bot.load_extension("cmds.shop")
-# bot.load_extension("cmds.wichteln")
 bot.load_extension("cmds.offer")
 bot.load_extension("cmds.voting")
 

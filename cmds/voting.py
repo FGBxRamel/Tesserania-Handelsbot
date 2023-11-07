@@ -122,7 +122,7 @@ class VotingCommand(i.Extension):
             if db.get_data("votings", {"user_id": int(ctx.author.id)}, fetch_all=True) == []:
                 await ctx.send("Es existieren keine Abstimmungen!")
                 return
-            elif self.user_is_privileged(ctx.author.roles):
+            if self.user_is_privileged(ctx.author.roles):
                 votings: list[tuple] = db.get_data(
                     "votings", attribute="voting_id", fetch_all=True)
             else:
@@ -166,7 +166,7 @@ class VotingCommand(i.Extension):
             if db.get_data("votings", {"user_id": int(ctx.author.id)}, fetch_all=True) == []:
                 await ctx.send("Es existieren keine Abstimmungen!")
                 return
-            elif self.user_is_privileged(ctx.author.roles):
+            if self.user_is_privileged(ctx.author.roles):
                 votings: list[tuple] = db.get_data(
                     "votings", attribute="voting_id", fetch_all=True)
             else:

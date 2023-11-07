@@ -270,7 +270,7 @@ class OfferCommand(i.Extension):
             return
         offer_owner_id = db.get_data(
             "offers", {"offer_id": id}, attribute="user_id")[0]
-        if not str(offer_owner_id) == str(ctx.author.id):
+        if str(offer_owner_id) != str(ctx.author.id):
             await ctx.send("Du bist nicht berechtigt dieses Angebot zu bearbeiten!",
                            ephemeral=True)
             return
