@@ -17,5 +17,5 @@ six==1.16.0
 tomli==2.0.1
 typing_extensions==4.8.0
 watchdog==3.0.0
-wcwidth==0.2.8
+wcwidth==0.2.9
 yarl==1.9.2
