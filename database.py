@@ -59,11 +59,13 @@ def save_data(table: str, attributes: str, values: tuple) -> None:
     """Saves data to the database."""
     table = table.replace(';', '')
     attributes = attributes.replace(';', '')
-    values = (i.replace(";", "") for i in values)
     con = sql.connect("data.db")
     cur = con.cursor()
-    statement = f"INSERT INTO {table} ({attributes}) VALUES {values}"
-    cur.execute(statement)
+    statement = f"INSERT INTO {table} ({attributes}) VALUES ( "
+    print(statement)
+    for value in values:
+        statement = statement[:-1] + "?, )"
+    cur.execute(statement, values)
     con.commit()
 
 
