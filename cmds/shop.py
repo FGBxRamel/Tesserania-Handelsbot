@@ -279,7 +279,7 @@ class ShopCommand(i.Extension):
         shop_count = db.get_data(
             "users", {"user_id": int(ctx.author.id)}, attribute="shop_count")
         if shop_count is None:
-            db.save_data("users", "user_id, offer_count, shop_count",
+            db.save_data("users", "user_id, offers_count, shop_count",
                          (int(ctx.author.id), 0, 0))
             shop_count = 0
         else:
@@ -368,68 +368,6 @@ class ShopCommand(i.Extension):
                            {"user_id": int(ctx.author.id)})
         del self.transfer_data[int(ctx.author.id)]
         await ctx.send("Shop erstellt.", ephemeral=True)
-
-    # TODO Transfer this into an admin command
-    @i.slash_command(
-        name="shop_admin",
-        description="Admin-Commands für Shops",
-        options=[
-            i.SlashCommandOption(
-                name="aktion",
-                description="Was soll gemacht werden?",
-                required=True,
-                type=i.OptionType.STRING,
-                choices=[
-                    i.SlashCommandChoice(name="genehmigen", value="approve"),
-                    i.SlashCommandChoice(name="ablehnen", value="deny"),
-                ]
-            )
-        ]
-    )
-    async def shop_admin(self, ctx: i.SlashContext, aktion: str):
-        await ctx.defer(ephemeral=True)
-        if aktion == "approve":
-            options = []
-            shops = db.get_data("shops", {"approved": False}, fetch_all=True,
-                                attribute="shop_id, name")
-            if shops == []:
-                await ctx.send("Es gibt keine Shops, die noch nicht genehmigt wurden.", ephemeral=True)
-                return
-            for shop in shops:
-                options.append(i.StringSelectOption(
-                    label=shop[0],
-                    description=shop[1],
-                    value=shop[0]
-                ))
-            shop_approve_select_menu = i.StringSelectMenu(
-                custom_id="shop_approve_id_select",
-                placeholder="Wähle die Shops aus die du genehmigen möchtest.",
-                min_values=1,
-                max_values=len(options),
-                *options
-            )
-            await ctx.send(components=[shop_approve_select_menu], ephemeral=True)
-        elif aktion == "deny":
-            options = []
-            shops = db.get_data("shops", {"approved": True}, fetch_all=True,
-                                attribute="shop_id, name")
-            if shops == []:
-                await ctx.send("Es gibt keine genehmigten Shops.", ephemeral=True)
-                return
-            for shop in shops:
-                options.append(i.StringSelectOption(
-                    label=shop[0],
-                    description=shop[1],
-                    value=shop[0]
-                ))
-            shop_deny_select_menu = i.StringSelectMenu(
-                custom_id="shop_deny_id_select",
-                placeholder="Wähle die Shops aus die du ablehnen möchtest.",
-                min_values=1,
-                max_values=len(options),
-                *options
-            )
-            await ctx.send(components=[shop_deny_select_menu], ephemeral=True)
 
     @ i.component_callback("shop_approve_id_select")
     async def shop_approve_id_select(self, ctx: i.ComponentContext):

@@ -6,8 +6,6 @@ import database as db
 
 import interactions as i
 
-# TODO Make config section per feature
-
 db.setup()
 
 with open('config.ini', 'r') as config_file:
@@ -33,6 +31,7 @@ bot.load_extension("interactions.ext.jurigged")
 bot.load_extension("cmds.shop")
 bot.load_extension("cmds.offer")
 bot.load_extension("cmds.voting")
+bot.load_extension("cmds.admin")
 
 votings_timer_started: set = set()
 
