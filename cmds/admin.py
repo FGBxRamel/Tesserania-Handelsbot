@@ -53,7 +53,8 @@ class AdminCommand(i.Extension):
                     i.SlashCommandChoice(name="genehmigen", value="approve"),
                     i.SlashCommandChoice(name="ablehnen", value="deny"),
                     i.SlashCommandChoice(name="erstellen", value="create"),
-                    i.SlashCommandChoice(name="bearbeiten", value="edit")
+                    i.SlashCommandChoice(name="bearbeiten", value="edit"),
+                    i.SlashCommandChoice(name="besitzer", value="owner")
                 ]
             )
         ]
@@ -147,7 +148,7 @@ class AdminCommand(i.Extension):
             shops = db.get_data("shops", fetch_all=True,
                                 attribute="shop_id, name")
             if shops == []:
-                await ctx.send("Es gibt keine Shops.", ephemeral=True)
+                await ctx.send("Es gibt keine Shops.", ephemeral=True, delete_after=5)
                 return
             for shop_id, name in shops:
                 options.append(i.StringSelectOption(
@@ -161,6 +162,25 @@ class AdminCommand(i.Extension):
                 *options
             )
             await ctx.send(components=[shop_edit_select_menu], ephemeral=True, delete_after=30)
+        elif aktion == "owner":
+            shops = db.get_data("shops", fetch_all=True,
+                                attribute="shop_id, name")
+            if shops == []:
+                await ctx.send("Es gibt keine Shops.", ephemeral=True, delete_after=5)
+                return
+            options = []
+            for shop_id, name in shops:
+                options.append(i.StringSelectOption(
+                    label=shop_id,
+                    description=name,
+                    value=shop_id
+                ))
+            shop_owner_select_menu = i.StringSelectMenu(
+                custom_id="admin_shop_owner_select_shop",
+                placeholder="Wähle den Shop aus, dessen Besitzer du bearbeiten möchtest.",
+                *options
+            )
+            await ctx.send(components=[shop_owner_select_menu], ephemeral=True, delete_after=20)
 
     @ i.component_callback("shop_approve_id_select")
     async def shop_approve_id_select(self, ctx: i.ComponentContext):
@@ -294,3 +314,27 @@ class AdminCommand(i.Extension):
         shop.dm_description = dm_description
         await shop.update()
         await ctx.send("Shop bearbeitet.", ephemeral=True, delete_after=10)
+
+    @i.component_callback("admin_shop_owner_select_shop")
+    async def admin_shop_owner_select_shop(self, ctx: i.ComponentContext):
+        await ctx.defer(ephemeral=True)
+        self.transfer_data[int(ctx.author.id)] = ctx.values[0]
+        user_select = i.UserSelectMenu(
+            custom_id="admin_shop_change_owner_select",
+            placeholder="Wähle die Besitzer des Shops aus.",
+            min_values=1,
+            max_values=25
+        )
+        await ctx.send(components=[user_select], ephemeral=True, delete_after=20)
+
+    @i.component_callback("admin_shop_change_owner_select")
+    async def admin_shop_owner_select(self, ctx: i.ComponentContext):
+        await ctx.defer(ephemeral=True)
+        shop = Shop(self.transfer_data[int(
+            ctx.author.id)], self.client, ctx.channel)
+        owners = []
+        for user in ctx.values:
+            owners.append(int(user.id))
+        shop.set_owners(owners)
+        await shop.update()
+        await ctx.send("Besitzer geändert.", ephemeral=True, delete_after=5)
