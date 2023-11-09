@@ -2,7 +2,7 @@ import asyncio
 import configparser as cp
 from functools import partial
 from time import mktime, strftime, strptime, time
-import database as db
+import classes.database as db
 
 import interactions as i
 

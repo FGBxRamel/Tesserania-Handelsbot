@@ -2,7 +2,7 @@ import configparser as cp
 from time import strftime, time, localtime
 from random import randint
 import sqlite3 as sql
-import database as db
+import classes.database as db
 
 import interactions as i
 
