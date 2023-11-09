@@ -35,9 +35,9 @@ class Shop():
         self.category = str(category) if category else None
         self.approved = bool(approved)
         self.message_id = int(message_id) if message_id else None
-        if type(owners) == str or type(owners) == int:
+        if type(owners) is str or type(owners) is int:
             self.owners = [owners]
-        elif type(owners) == list:
+        elif type(owners) is list:
             self.owners = [int(owner) for owner in owners]
 
         self._refresh_config()
@@ -129,9 +129,9 @@ class Shop():
 
     def set_owners(self, owner: str | int | list[str | int]) -> None:
         """Sets the owners of the shop."""
-        if type(owner) == str or type(owner) == int:
+        if type(owner) is str or type(owner) is int:
             self.owners = [owner]
-        elif type(owner) == list:
+        elif type(owner) is list:
             self.owners = [int(owner) for owner in owner]
 
     def get_embed(self) -> i.Embed:
