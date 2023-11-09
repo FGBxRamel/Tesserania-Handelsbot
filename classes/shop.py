@@ -134,6 +134,10 @@ class Shop():
         elif type(owner) == list:
             self.owners = [int(owner) for owner in owner]
 
+    def get_embed(self) -> i.Embed:
+        """Returns the embed of the shop."""
+        return self._get_embed()
+
     def _setup(self, id: int) -> bool:
         """Sets up the shop if it's found in the database.
         Returns True if the shop was found, False otherwise."""

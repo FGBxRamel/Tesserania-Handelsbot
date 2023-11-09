@@ -364,7 +364,7 @@ class ShopCommand(i.Extension):
                             attribute="shop_id")
         for shop_id in shops:
             shop = Shop(int(shop_id[0]), self.client, ctx.channel)
-            embed = await shop._get_embed()
+            embed = await shop.get_embed()
             embeds.append(embed)
         paginator = Paginator.create_from_embeds(self.client, *embeds)
         paginator.show_select_menu = True

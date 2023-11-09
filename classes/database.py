@@ -62,7 +62,7 @@ def save_data(table: str, attributes: str, values: tuple) -> None:
     with sql.connect("data.db") as con:
         cur = con.cursor()
         statement = f"INSERT INTO {table} ({attributes}) VALUES ( "
-        for value in values:
+        for _ in values:
             statement += "?, "
         statement = statement[:-2] + ")"
         cur.execute(statement, values)
