@@ -1,7 +1,7 @@
 import configparser as cp
 from random import randint
 from time import localtime, sleep, strftime, time
-import database as db
+import classes.database as db
 import sqlite3 as sql
 
 import interactions as i
