@@ -1,6 +1,7 @@
 import asyncio
 import configparser as cp
 from functools import partial
+import pkgutil
 from time import mktime, strftime, strptime, time
 import classes.database as db
 
@@ -26,12 +27,12 @@ bot = i.Client(
 scope_ids = SERVER_IDS
 run = False
 
-# NOTE Wichtel feature won't be supported anymore; it's there, but without support
+# NOTE Wichtel feature won't be supported anymore; it's there (docs folder), but without support
 bot.load_extension("interactions.ext.jurigged")
-bot.load_extension("cmds.shop")
-bot.load_extension("cmds.offer")
-bot.load_extension("cmds.voting")
-bot.load_extension("cmds.admin")
+extension_names = [m.name for m in pkgutil.iter_modules(
+    ["cmds"], prefix="cmds.")]
+for extension in extension_names:
+    bot.load_extension(extension)
 
 votings_timer_started: set = set()
 

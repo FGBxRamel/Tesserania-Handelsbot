@@ -1,4 +1,5 @@
 import configparser as cp
+import pkgutil
 from random import randint
 import classes.database as db
 from classes.shop import Shop
@@ -31,6 +32,12 @@ class AdminCommand(i.Extension):
         cur = con.cursor()
         cur.execute("SELECT shop_id FROM shops")
         return [str(ident[0]) for ident in cur.fetchall()]
+
+    def reload_extensions(self) -> None:
+        extension_names = [
+            m.name for m in pkgutil.iter_modules(["cmds"], prefix="cmds.")]
+        for extension in extension_names:
+            self.client.reload_extension(extension)
 
     @i.slash_command(
         name="admin",
@@ -338,3 +345,47 @@ class AdminCommand(i.Extension):
         shop.set_owners(owners)
         await shop.update()
         await ctx.send("Besitzer geändert.", ephemeral=True, delete_after=5)
+
+    @admin_base.subcommand(
+        sub_cmd_name="config",
+        sub_cmd_description="Config Command",
+        options=[
+            i.SlashCommandOption(
+                name="aktion",
+                description="Was soll gemacht werden?",
+                required=True,
+                type=i.OptionType.STRING,
+                choices=[
+                    i.SlashCommandChoice(name="bearbeiten", value="edit")
+                ]
+            )
+        ]
+    )
+    async def admin_config(self, ctx: i.SlashContext, aktion: str) -> None:
+        if aktion == "edit":
+            with open('config.ini', 'r') as config_file:
+                config_text = config_file.read()
+            components = [
+                i.InputText(
+                    label="Config",
+                    placeholder="Config",
+                    value=config_text,
+                    custom_id="config",
+                    style=i.TextStyles.PARAGRAPH,
+                    required=True
+                )
+            ]
+            config_edit_modal = i.Modal(
+                title="Kategorie bearbeiten",
+                custom_id="admin_config_edit",
+                *components
+            )
+            await ctx.send_modal(config_edit_modal)
+
+    @i.modal_callback("admin_config_edit")
+    async def admin_config_edit(self, ctx: i.ModalContext, config: str):
+        with open('config.ini', 'w') as config_file:
+            config_file.write(config)
+        self.refresh_config()
+        self.reload_extensions()
+        await ctx.send("Config bearbeitet.", ephemeral=True, delete_after=5)
