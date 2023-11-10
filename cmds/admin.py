@@ -61,7 +61,9 @@ class AdminCommand(i.Extension):
                     i.SlashCommandChoice(name="ablehnen", value="deny"),
                     i.SlashCommandChoice(name="erstellen", value="create"),
                     i.SlashCommandChoice(name="bearbeiten", value="edit"),
-                    i.SlashCommandChoice(name="besitzer", value="owner")
+                    i.SlashCommandChoice(name="besitzer", value="owner"),
+                    i.SlashCommandChoice(name="pflicht", value="obligatory"),
+                    i.SlashCommandChoice(name="freiwillig", value="voluntary")
                 ]
             )
         ]
@@ -188,6 +190,48 @@ class AdminCommand(i.Extension):
                 *options
             )
             await ctx.send(components=[shop_owner_select_menu], ephemeral=True, delete_after=20)
+        elif aktion == "obligatory":
+            options = []
+            shops = db.get_data("shops", {"obligatory": False}, fetch_all=True,
+                                attribute="shop_id, name")
+            if shops == []:
+                await ctx.send("Es gibt keine Shops, welche freiwillig sind.", ephemeral=True, delete_after=5)
+                return
+            for shop_id, name in shops:
+                options.append(i.StringSelectOption(
+                    label=shop_id,
+                    description=name,
+                    value=shop_id
+                ))
+            shop_obligatory_select_menu = i.StringSelectMenu(
+                custom_id="shop_obligatory_id_select",
+                placeholder="Wähle die Shops aus die du freiwillig machen möchtest.",
+                min_values=1,
+                max_values=len(options),
+                *options
+            )
+            await ctx.send(components=[shop_obligatory_select_menu], ephemeral=True, delete_after=30)
+        elif aktion == "voluntary":
+            options = []
+            shops = db.get_data("shops", {"obligatory": True}, fetch_all=True,
+                                attribute="shop_id, name")
+            if shops == []:
+                await ctx.send("Es gibt keine Shops, mit Kaufplicht.", ephemeral=True, delete_after=5)
+                return
+            for shop_id, name in shops:
+                options.append(i.StringSelectOption(
+                    label=shop_id,
+                    description=name,
+                    value=shop_id
+                ))
+            shop_voluntary_select_menu = i.StringSelectMenu(
+                custom_id="shop_voluntary_id_select",
+                placeholder="Wähle die Shops aus die du freiwillig machen möchtest.",
+                min_values=1,
+                max_values=len(options),
+                *options
+            )
+            await ctx.send(components=[shop_voluntary_select_menu], ephemeral=True, delete_after=30)
 
     @ i.component_callback("shop_approve_id_select")
     async def shop_approve_id_select(self, ctx: i.ComponentContext):
@@ -345,6 +389,24 @@ class AdminCommand(i.Extension):
         shop.set_owners(owners)
         await shop.update()
         await ctx.send("Besitzer geändert.", ephemeral=True, delete_after=5)
+
+    @i.component_callback("shop_obligatory_id_select")
+    async def shop_obligatory_id_select(self, ctx: i.ComponentContext):
+        await ctx.defer(ephemeral=True)
+        for shop_id in ctx.values:
+            shop = Shop(shop_id, self.client, ctx.channel)
+            shop.obligatory = True
+            await shop.update()
+        await ctx.send("Die Shops haben nun eine Kaufplicht.", ephemeral=True, delete_after=5)
+
+    @i.component_callback("shop_voluntary_id_select")
+    async def shop_voluntary_id_select(self, ctx: i.ComponentContext):
+        await ctx.defer(ephemeral=True)
+        for shop_id in ctx.values:
+            shop = Shop(shop_id, self.client, ctx.channel)
+            shop.obligatory = False
+            await shop.update()
+        await ctx.send("Die Shops sind nun freiwillig.", ephemeral=True, delete_after=5)
 
     @admin_base.subcommand(
         sub_cmd_name="config",
