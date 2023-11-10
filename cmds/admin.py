@@ -136,14 +136,6 @@ class AdminCommand(i.Extension):
                     style=i.TextStyles.PARAGRAPH,
                     required=True,
                     max_length=100
-                ),
-                i.InputText(
-                    label="DM-Beschreibung",
-                    placeholder="Was soll in der DM stehen?",
-                    custom_id="dm_description",
-                    style=i.TextStyles.PARAGRAPH,
-                    required=True,
-                    max_length=150
                 )
             ]
             shop_create_modal = i.Modal(
@@ -281,7 +273,7 @@ class AdminCommand(i.Extension):
 
     @i.modal_callback("admin_shop_create")
     async def admin_shop_create(self, ctx: i.ModalContext, name: str, offer: str,
-                                location: str, dm_description: str):
+                                location: str):
         identifier = str(randint(1000, 9999))
         identifiers = self.get_shop_identifiers()
         while identifier in identifiers:
@@ -293,7 +285,6 @@ class AdminCommand(i.Extension):
             name=name,
             offer=offer,
             location=location,
-            dm_description=dm_description,
             approved=True,
             skip_setup=True
         )
@@ -336,15 +327,6 @@ class AdminCommand(i.Extension):
                 required=True,
                 max_length=100,
                 value=shop.location
-            ),
-            i.InputText(
-                label="DM-Beschreibung",
-                placeholder="Was soll in der DM stehen?",
-                custom_id="dm_description",
-                style=i.TextStyles.PARAGRAPH,
-                required=True,
-                max_length=150,
-                value=shop.dm_description
             )
         ]
         shop_edit_modal = i.Modal(
@@ -356,13 +338,12 @@ class AdminCommand(i.Extension):
 
     @i.modal_callback("admin_shop_edit")
     async def admin_shop_edit(self, ctx: i.ModalContext, name: str, offer: str,
-                              location: str, dm_description: str):
+                              location: str):
         shop = Shop(self.transfer_data[int(
             ctx.author.id)], self.client, ctx.channel)
         shop.name = name
         shop.offer = offer
         shop.location = location
-        shop.dm_description = dm_description
         await shop.update()
         await ctx.send("Shop bearbeitet.", ephemeral=True, delete_after=10)
 
