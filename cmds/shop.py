@@ -137,7 +137,7 @@ class ShopCommand(i.Extension):
             self.transfer_data[int(ctx.author.id)] = {}
             row1 = i.ActionRow(self.categorie_selectmenu)
             row2 = i.ActionRow(self.abort_button)
-            sent_message = await ctx.send(components=[row1, row2], ephemeral=True, delete_after=15)
+            sent_message = await ctx.send(components=[row1, row2], ephemeral=True, delete_after=20)
             self.transfer_data[int(ctx.author.id)]["message_id"] = int(
                 sent_message.id)
         elif aktion == "edit":
@@ -212,7 +212,7 @@ class ShopCommand(i.Extension):
                 custom_id="offer",
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
-                max_length=250,
+                max_length=600,
                 value=shop.offer
             ),
             i.InputText(
@@ -221,17 +221,8 @@ class ShopCommand(i.Extension):
                 custom_id="location",
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
-                max_length=100,
+                max_length=600,
                 value=shop.location
-            ),
-            i.InputText(
-                label="DM-Beschreibung",
-                placeholder="Was soll in der DM stehen?",
-                custom_id="dm_description",
-                style=i.TextStyles.PARAGRAPH,
-                required=True,
-                max_length=150,
-                value=shop.dm_description
             )
         ]
         shop_modal = i.Modal(
@@ -242,7 +233,7 @@ class ShopCommand(i.Extension):
         await ctx.send_modal(shop_modal)
 
     @ i.modal_callback("shop_edit_modal")
-    async def shop_edit_modal(self, ctx: i.ComponentContext, id: str, name: str, offer: str, location: str, dm_description: str):
+    async def shop_edit_modal(self, ctx: i.ComponentContext, id: str, name: str, offer: str, location: str):
         try:
             shop = Shop(int(id), self.client, ctx.channel)
         except ValueError:
@@ -256,7 +247,6 @@ class ShopCommand(i.Extension):
         shop.name = name
         shop.offer = offer
         shop.location = location
-        shop.dm_description = dm_description
         await shop.update()
         await ctx.send("Der Shop wurde erfolgreich bearbeitet!", ephemeral=True, delete_after=5)
 
@@ -313,7 +303,7 @@ class ShopCommand(i.Extension):
                 custom_id="offer",
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
-                max_length=250
+                max_length=600
             ),
             i.InputText(
                 label="Ort",
@@ -321,15 +311,7 @@ class ShopCommand(i.Extension):
                 custom_id="location",
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
-                max_length=100
-            ),
-            i.InputText(
-                label="DM-Beschreibung",
-                placeholder="Was soll in der DM stehen?",
-                custom_id="dm_description",
-                style=i.TextStyles.PARAGRAPH,
-                required=True,
-                max_length=150
+                max_length=500
             )
         ]
         shop_create_modal = i.Modal(
@@ -340,12 +322,11 @@ class ShopCommand(i.Extension):
         await ctx.send_modal(shop_create_modal)
 
     @ i.modal_callback("shop_create")
-    async def mod_shop_create(self, ctx: i.ModalContext, name: str, offer: str, location: str, dm_description: str):
+    async def mod_shop_create(self, ctx: i.ModalContext, name: str, offer: str, location: str):
         shop: Shop = self.transfer_data[int(ctx.author.id)]
         shop.set_name(name)
         shop.set_offer(offer)
         shop.set_location(location)
-        shop.set_dm_description(dm_description)
         self.transfer_data[int(ctx.author.id)] = shop
         user_select = i.UserSelectMenu(
             custom_id="shop_create_user_select",
@@ -353,7 +334,7 @@ class ShopCommand(i.Extension):
             min_values=1,
             max_values=25,
         )
-        await ctx.send(components=user_select, ephemeral=True, delete_after=15)
+        await ctx.send(components=user_select, ephemeral=True, delete_after=25)
 
     @i.component_callback("shop_search_category_select")
     async def shop_search_category_select(self, ctx: i.ComponentContext):

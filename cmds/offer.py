@@ -42,7 +42,7 @@ class OfferCommand(i.Extension):
         options=[
             i.SlashCommandOption(
                 name="aktion",
-                description="Das, was du tuen willst.",
+                description="Das, was du tun willst.",
                 type=i.OptionType.STRING,
                 required=True,
                 choices=[

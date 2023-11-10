@@ -13,7 +13,6 @@ class Shop():
         name: str = None,
         offer: str = None,
         location: str = None,
-        dm_description: str = None,
         category: str = None,
         approved: bool = False,
         message_id: int = None,
@@ -31,8 +30,6 @@ class Shop():
         self.name = str(name) if name else None
         self.offer = str(offer) if offer else None
         self.location = str(location) if location else None
-        self.dm_description = str(
-            dm_description) if dm_description else None
         self.category = str(category) if category else None
         self.approved = bool(approved)
         self.message_id = int(message_id) if message_id else None
@@ -61,10 +58,10 @@ class Shop():
         """Updates the shop in the database and the embed."""
         # I know recreating is not the best option, but sufficient for this case.
         db.delete_data("shops", {"shop_id": self.id})
-        db.save_data("shops", "name, offer, location, dm_description, category, approved,\
+        db.save_data("shops", "name, offer, location, category, approved,\
                      message_id, owners, shop_id, obligatory",
-                     (self.name, self.offer, self.location, self.dm_description,
-                      self.category, self.approved, self.message_id,
+                     (self.name, self.offer, self.location, self.category,
+                      self.approved, self.message_id,
                       ",".join([str(owner) for owner in self.owners]), self.id, self.obligatory))
         message = await self.channel.fetch_message(self.message_id)
         embed = await self._get_embed()
@@ -85,9 +82,9 @@ class Shop():
         message = await self.channel.send(embed=embed)
         self.message_id = int(message.id)
         try:
-            db.save_data("shops", "shop_id, name, offer, location, dm_description, category, approved, message_id, owners, obligatory",
-                         (self.id, self.name, self.offer, self.location, self.dm_description,
-                          self.category, self.approved, self.message_id, ",".join([str(owner) for owner in self.owners]), self.obligatory))
+            db.save_data("shops", "shop_id, name, offer, location, category, approved, message_id, owners, obligatory",
+                         (self.id, self.name, self.offer, self.location, self.category, self.approved,
+                          self.message_id, ",".join([str(owner) for owner in self.owners]), self.obligatory))
         except IntegrityError:
             await message.delete()
             raise ValueError("Shop already exists.")
@@ -121,10 +118,6 @@ class Shop():
         """Sets the location of the shop."""
         self.location = str(location)
 
-    def set_dm_description(self, dm_description: str) -> None:
-        """Sets the dm_description of the shop."""
-        self.dm_description = str(dm_description)
-
     def set_category(self, category: str) -> None:
         """Sets the category of the shop."""
         self.category = str(category)
@@ -149,12 +142,11 @@ class Shop():
         self.name = shop[0]
         self.offer = shop[1].replace("\\n", "\n")
         self.location = shop[2]
-        self.dm_description = shop[3]
-        self.category = shop[4]
-        self.approved = bool(shop[5])
-        self.message_id = int(shop[6])
-        self.owners = [int(owner) for owner in shop[7].split(",")]
-        self.obligatory = bool(shop[8])
+        self.category = shop[3]
+        self.approved = bool(shop[4])
+        self.message_id = int(shop[5])
+        self.owners = [int(owner) for owner in shop[6].split(",")]
+        self.obligatory = bool(shop[7])
         return True
 
     async def _get_embed(self) -> i.Embed:
