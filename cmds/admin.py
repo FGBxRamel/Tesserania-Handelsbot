@@ -118,24 +118,21 @@ class AdminCommand(i.Extension):
                     placeholder="Name",
                     custom_id="name",
                     style=i.TextStyles.SHORT,
-                    required=True,
-                    max_length=50
+                    required=True
                 ),
                 i.InputText(
                     label="Angebot",
                     placeholder="Was bietest du an?",
                     custom_id="offer",
                     style=i.TextStyles.PARAGRAPH,
-                    required=True,
-                    max_length=250
+                    required=True
                 ),
                 i.InputText(
                     label="Ort",
                     placeholder="Wo befindet sich dein Shop?",
                     custom_id="location",
                     style=i.TextStyles.PARAGRAPH,
-                    required=True,
-                    max_length=100
+                    required=True
                 )
             ]
             shop_create_modal = i.Modal(
@@ -307,7 +304,6 @@ class AdminCommand(i.Extension):
                 custom_id="name",
                 style=i.TextStyles.SHORT,
                 required=True,
-                max_length=50,
                 value=shop.name
             ),
             i.InputText(
@@ -316,7 +312,6 @@ class AdminCommand(i.Extension):
                 custom_id="offer",
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
-                max_length=250,
                 value=shop.offer
             ),
             i.InputText(
@@ -325,7 +320,6 @@ class AdminCommand(i.Extension):
                 custom_id="location",
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
-                max_length=100,
                 value=shop.location
             )
         ]
