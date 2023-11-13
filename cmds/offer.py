@@ -19,14 +19,9 @@ class OfferCommand(i.Extension):
             config = cp.ConfigParser()
             config.read_file(config_file)
             global scope_ids
-            scope_ids = config.get('IDs', 'server').split(',')
-            self.privileged_roles_ids = [int(id) for id in config.get(
-                'IDs', 'privileged_roles').split(',')]
+            scope_ids = config.get('General', 'servers').split(',')
             self.role_to_ping_id = config.getint(
-                'IDs', 'voting_role_to_ping')
-
-    def user_is_privileged(self, roles: list[int]) -> bool:
-        return any(role in self.privileged_roles_ids for role in roles)
+                'IDs', 'ping_role')
 
     @staticmethod
     def get_identifiers() -> list[str]:
@@ -112,26 +107,15 @@ class OfferCommand(i.Extension):
             )
             await ctx.send_modal(create_modal)
         elif aktion == "delete":
-            priviledged = self.user_is_privileged(ctx.author.roles)
             options = []
-            if not priviledged:
-                for offer in db.get_data("offers", {"user_id": str(ctx.author.id)}, attribute="offer_id, title", fetch_all=True):
-                    options.append(
-                        i.StringSelectOption(
-                            label=offer[0],
-                            value=offer[0],
-                            description=offer[1]
-                        )
+            for offer in db.get_data("offers", {"user_id": str(ctx.author.id)}, attribute="offer_id, title", fetch_all=True):
+                options.append(
+                    i.StringSelectOption(
+                        label=offer[0],
+                        value=offer[0],
+                        description=offer[1]
                     )
-            else:
-                for offer in db.get_data("offers", attribute="offer_id, title", fetch_all=True):
-                    options.append(
-                        i.StringSelectOption(
-                            label=offer[0],
-                            value=offer[0],
-                            description=offer[1]
-                        )
-                    )
+                )
             if len(options) == 0:
                 await ctx.send("Du hast keine Angebote, die du löschen kannst.", ephemeral=True)
                 return

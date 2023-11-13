@@ -23,10 +23,8 @@ class VotingCommand(i.Extension):
             config.read_file(config_file)
             global scope_ids
             scope_ids = config.get('IDs', 'server').split(',')
-            self.privileged_roles_ids = [int(id) for id in config.get(
-                'IDs', 'privileged_roles').split(',')]
             self.voting_role_to_ping_id = config.getint(
-                'IDs', 'voting_role_to_ping')
+                'Voting', 'ping_role')
 
     @staticmethod
     def get_identifiers() -> list[int]:
@@ -34,9 +32,6 @@ class VotingCommand(i.Extension):
         cur = con.cursor()
         cur.execute("SELECT voting_id FROM votings")
         return [int(ident[0]) for ident in cur.fetchall()]
-
-    def user_is_privileged(self, roles: list[int]) -> bool:
-        return any(role in self.privileged_roles_ids for role in roles)
 
     @staticmethod
     def evaluate_voting(message: i.Message) -> str:
@@ -122,12 +117,8 @@ class VotingCommand(i.Extension):
             if db.get_data("votings", {"user_id": int(ctx.author.id)}, fetch_all=True) == []:
                 await ctx.send("Es existieren keine Abstimmungen!")
                 return
-            if self.user_is_privileged(ctx.author.roles):
-                votings: list[tuple] = db.get_data(
-                    "votings", attribute="voting_id", fetch_all=True)
-            else:
-                votings: list[tuple] = db.get_data(
-                    "votings", {"user_id": int(ctx.author.id)}, attribute="voting_id", fetch_all=True)
+            votings: list[tuple] = db.get_data(
+                "votings", {"user_id": int(ctx.author.id)}, attribute="voting_id", fetch_all=True)
             for voting_tuple in votings:
                 options.append(
                     i.StringSelectOption(
@@ -166,12 +157,8 @@ class VotingCommand(i.Extension):
             if db.get_data("votings", {"user_id": int(ctx.author.id)}, fetch_all=True) == []:
                 await ctx.send("Es existieren keine Abstimmungen!")
                 return
-            if self.user_is_privileged(ctx.author.roles):
-                votings: list[tuple] = db.get_data(
-                    "votings", attribute="voting_id", fetch_all=True)
-            else:
-                votings: list[tuple] = db.get_data(
-                    "votings", {"user_id": int(ctx.author.id)}, attribute="voting_id", fetch_all=True)
+            votings: list[tuple] = db.get_data(
+                "votings", {"user_id": int(ctx.author.id)}, attribute="voting_id", fetch_all=True)
             for voting_tuple in votings:
                 options.append(
                     i.StringSelectOption(
