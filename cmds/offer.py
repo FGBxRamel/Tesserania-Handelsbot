@@ -21,7 +21,7 @@ class OfferCommand(i.Extension):
             global scope_ids
             scope_ids = config.get('General', 'servers').split(',')
             self.role_to_ping_id = config.getint(
-                'IDs', 'ping_role')
+                'Offer', 'ping_role')
 
     @staticmethod
     def get_identifiers() -> list[str]:

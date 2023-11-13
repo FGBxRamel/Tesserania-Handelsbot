@@ -22,7 +22,7 @@ class VotingCommand(i.Extension):
             config = cp.ConfigParser()
             config.read_file(config_file)
             global scope_ids
-            scope_ids = config.get('IDs', 'server').split(',')
+            scope_ids = config.get('General', 'servers').split(',')
             self.voting_role_to_ping_id = config.getint(
                 'Voting', 'ping_role')
 
