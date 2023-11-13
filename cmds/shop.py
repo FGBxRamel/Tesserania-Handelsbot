@@ -60,7 +60,8 @@ class ShopCommand(i.Extension):
         cur.execute("SELECT shop_id FROM shops")
         return [str(ident[0]) for ident in cur.fetchall()]
 
-    def get_shop_ids_select_options(self, user_id: int) -> list[i.StringSelectOption]:
+    @staticmethod
+    def get_shop_ids_select_options(user_id: int) -> list[i.StringSelectOption]:
         options = []
         shops = db.get_data("shops", fetch_all=True,
                             attribute="shop_id, name, owners")
