@@ -31,8 +31,6 @@ class ShopCommand(i.Extension):
         global scope_ids
         scope_ids = config.get('IDs', 'server').split(',')
         self.transfer_data = {}
-        self.privileged_roles_ids = [int(id) for id in config.get(
-            'IDs', 'privileged_roles').split(',')]
 
     def refresh_components(self):
         options = []
@@ -62,32 +60,20 @@ class ShopCommand(i.Extension):
         cur.execute("SELECT shop_id FROM shops")
         return [str(ident[0]) for ident in cur.fetchall()]
 
-    def get_shop_ids_select_options(self, user_id: int, user_roles: list[int]) -> list[i.StringSelectOption]:
+    @staticmethod
+    def get_shop_ids_select_options(user_id: int) -> list[i.StringSelectOption]:
         options = []
-        priviliged = self.user_is_privileged(user_roles)
         shops = db.get_data("shops", fetch_all=True,
                             attribute="shop_id, name, owners")
-        if priviliged:
-            for shop in shops:
+        for shop in shops:
+            if str(user_id) in shop[2]:
                 option = i.StringSelectOption(
-                    label=shop[0],
+                    label=str(shop[0]),
                     value=str(shop[0]),
                     description=shop[1]
                 )
                 options.append(option)
-        else:
-            for shop in shops:
-                if str(user_id) in shop[2]:
-                    option = i.StringSelectOption(
-                        label=str(shop[0]),
-                        value=str(shop[0]),
-                        description=shop[1]
-                    )
-                    options.append(option)
         return options
-
-    def user_is_privileged(self, roles: list[int]) -> bool:
-        return any(role in self.privileged_roles_ids for role in roles)
 
     @i.component_callback("shop_abort")
     async def shop_abort(self, ctx: i.ComponentContext):
@@ -142,7 +128,7 @@ class ShopCommand(i.Extension):
                 sent_message.id)
         elif aktion == "edit":
             options = self.get_shop_ids_select_options(
-                int(ctx.user.id), ctx.member.roles)
+                int(ctx.user.id))
             shop_ids_selectmenu = i.StringSelectMenu(
                 custom_id="shop_edit_id_select",
                 placeholder="Shop-ID",
@@ -152,7 +138,7 @@ class ShopCommand(i.Extension):
                            components=shop_ids_selectmenu, ephemeral=True, delete_after=15)
         elif aktion == "delete":
             options = self.get_shop_ids_select_options(
-                int(ctx.user.id), ctx.member.roles)
+                int(ctx.user.id))
             if len(options) == 0:
                 await ctx.send("Du hast keine Shops, die du löschen könntest!", ephemeral=True,
                                delete_after=5)
