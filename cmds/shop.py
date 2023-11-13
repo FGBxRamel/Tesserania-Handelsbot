@@ -29,7 +29,7 @@ class ShopCommand(i.Extension):
             self.categories_excluded_from_limit = [
                 category.strip() for category in self.categories_excluded_from_limit]
         global scope_ids
-        scope_ids = config.get('IDs', 'server').split(',')
+        scope_ids = config.get('General', 'servers').split(',')
         self.transfer_data = {}
 
     def refresh_components(self):

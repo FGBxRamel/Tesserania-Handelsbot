@@ -21,7 +21,7 @@ class AdminCommand(i.Extension):
             config = cp.ConfigParser()
             config.read_file(config_file)
             global scope_ids
-            scope_ids = config.get('IDs', 'server').split(',')
+            scope_ids = config.get('General', 'servers').split(',')
             self.shop_categories = config.get('Shops', 'categories').split(',')
             self.shop_categories = [category.strip()
                                     for category in self.shop_categories]

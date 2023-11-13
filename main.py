@@ -13,12 +13,9 @@ with open('config.ini', 'r') as config_file:
     config = cp.ConfigParser()
     config.read_file(config_file)
     TOKEN = config.get('General', 'token')
-    SERVER_IDS = config.get('IDs', 'server').split(',')
-    privileged_roles_ids = [int(id) for id in config.get(
-        'IDs', 'privileged_roles').split(',')]
-    offer_channel_id = config.getint('IDs', 'offer_channel')
-    voting_channel_id = config.getint('IDs', 'voting_channel')
-    voting_role_to_ping_id = config.getint('IDs', 'voting_role_to_ping')
+    SERVER_IDS = config.get('General', 'servers').split(',')
+    offer_channel_id = config.getint('Offer', 'offer_channel')
+    voting_channel_id = config.getint('Voting', 'voting_channel')
 
 
 bot = i.Client(
