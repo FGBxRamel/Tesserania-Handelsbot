@@ -82,14 +82,19 @@ class AdminCommand(i.Extension):
                     description=name,
                     value=shop_id
                 ))
-            shop_approve_select_menu = i.StringSelectMenu(
-                custom_id="shop_approve_id_select",
-                placeholder="Wähle die Shops aus die du genehmigen möchtest.",
-                min_values=1,
-                max_values=len(options),
-                *options
-            )
-            await ctx.send(components=[shop_approve_select_menu], ephemeral=True, delete_after=30)
+            menus = []
+            for j in range(0, len(options) // 25 + 1):
+                menus.append(
+                    i.StringSelectMenu(
+                        custom_id=f"shop_approve_id_select_{j}",
+                        placeholder="Wähle die Shops aus die du genehmigen möchtest.",
+                        *options[j*25:(j+1)*25],
+                        min_values=1,
+                        max_values=len(options[j*25:(j+1)*25])
+                    )
+                )
+            for menu in menus:
+                await ctx.send(components=menu, ephemeral=True, delete_after=25, silent=True)
         elif aktion == "deny":
             options = []
             shops = db.get_data("shops", {"approved": True}, fetch_all=True,
@@ -103,14 +108,19 @@ class AdminCommand(i.Extension):
                     description=name,
                     value=shop_id
                 ))
-            shop_deny_select_menu = i.StringSelectMenu(
-                custom_id="shop_deny_id_select",
-                placeholder="Wähle die Shops aus die du ablehnen möchtest.",
-                min_values=1,
-                max_values=len(options),
-                *options
-            )
-            await ctx.send(components=[shop_deny_select_menu], ephemeral=True, delete_after=30)
+            menus = []
+            for j in range(0, len(options) // 25 + 1):
+                menus.append(
+                    i.StringSelectMenu(
+                        custom_id=f"shop_deny_id_select_{j}",
+                        placeholder="Shop-ID",
+                        *options[j*25:(j+1)*25],
+                        min_values=1,
+                        max_values=len(options[j*25:(j+1)*25])
+                    )
+                )
+            for menu in menus:
+                await ctx.send(components=menu, ephemeral=True, delete_after=25, silent=True)
         elif aktion == "create":
             components = [
                 i.InputText(
@@ -154,12 +164,17 @@ class AdminCommand(i.Extension):
                     description=name,
                     value=shop_id
                 ))
-            shop_edit_select_menu = i.StringSelectMenu(
-                custom_id="admin_shop_edit_id_select",
-                placeholder="Wähle den Shop aus, den du bearbeiten möchtest.",
-                *options
-            )
-            await ctx.send(components=[shop_edit_select_menu], ephemeral=True, delete_after=30)
+                menus = []
+            for j in range(0, len(options) // 25 + 1):
+                menus.append(
+                    i.StringSelectMenu(
+                        custom_id=f"admin_shop_edit_id_select_{j}",
+                        placeholder="Shop-ID",
+                        *options[j*25:(j+1)*25]
+                    )
+                )
+            for menu in menus:
+                await ctx.send(components=menu, ephemeral=True, delete_after=25, silent=True)
         elif aktion == "owner":
             shops = db.get_data("shops", fetch_all=True,
                                 attribute="shop_id, name")
@@ -173,12 +188,17 @@ class AdminCommand(i.Extension):
                     description=name,
                     value=shop_id
                 ))
-            shop_owner_select_menu = i.StringSelectMenu(
-                custom_id="admin_shop_owner_select_shop",
-                placeholder="Wähle den Shop aus, dessen Besitzer du bearbeiten möchtest.",
-                *options
-            )
-            await ctx.send(components=[shop_owner_select_menu], ephemeral=True, delete_after=20)
+            menus = []
+            for j in range(0, len(options) // 25 + 1):
+                menus.append(
+                    i.StringSelectMenu(
+                        custom_id=f"admin_shop_owner_select_shop_{j}",
+                        placeholder="Shop-ID",
+                        *options[j*25:(j+1)*25]
+                    )
+                )
+            for menu in menus:
+                await ctx.send(components=menu, ephemeral=True, delete_after=25, silent=True)
         elif aktion == "obligatory":
             options = []
             shops = db.get_data("shops", {"obligatory": False}, fetch_all=True,
@@ -192,14 +212,19 @@ class AdminCommand(i.Extension):
                     description=name,
                     value=shop_id
                 ))
-            shop_obligatory_select_menu = i.StringSelectMenu(
-                custom_id="shop_obligatory_id_select",
-                placeholder="Wähle die Shops aus die du freiwillig machen möchtest.",
-                min_values=1,
-                max_values=len(options),
-                *options
-            )
-            await ctx.send(components=[shop_obligatory_select_menu], ephemeral=True, delete_after=30)
+            menus = []
+            for j in range(0, len(options) // 25 + 1):
+                menus.append(
+                    i.StringSelectMenu(
+                        custom_id=f"shop_obligatory_id_select_{j}",
+                        placeholder="Wähle die Shops aus die du freiwillig machen möchtest.",
+                        *options[j*25:(j+1)*25],
+                        min_values=1,
+                        max_values=len(options[j*25:(j+1)*25])
+                    )
+                )
+            for menu in menus:
+                await ctx.send(components=menu, ephemeral=True, delete_after=25, silent=True)
         elif aktion == "voluntary":
             options = []
             shops = db.get_data("shops", {"obligatory": True}, fetch_all=True,
@@ -213,14 +238,19 @@ class AdminCommand(i.Extension):
                     description=name,
                     value=shop_id
                 ))
-            shop_voluntary_select_menu = i.StringSelectMenu(
-                custom_id="shop_voluntary_id_select",
-                placeholder="Wähle die Shops aus die du freiwillig machen möchtest.",
-                min_values=1,
-                max_values=len(options),
-                *options
-            )
-            await ctx.send(components=[shop_voluntary_select_menu], ephemeral=True, delete_after=30)
+            menus = []
+            for j in range(0, len(options) // 25 + 1):
+                menus.append(
+                    i.StringSelectMenu(
+                        custom_id=f"shop_voluntary_id_select_{j}",
+                        placeholder="Wähle die Shops aus die du freiwillig machen möchtest.",
+                        *options[j*25:(j+1)*25],
+                        min_values=1,
+                        max_values=len(options[j*25:(j+1)*25])
+                    )
+                )
+            for menu in menus:
+                await ctx.send(components=menu, ephemeral=True, delete_after=25, silent=True)
 
     @ i.component_callback("shop_approve_id_select")
     async def shop_approve_id_select(self, ctx: i.ComponentContext):
@@ -230,6 +260,18 @@ class AdminCommand(i.Extension):
             await shop.approve()
         await ctx.send("Shop(s) genehmigt.", ephemeral=True, delete_after=5)
 
+    @ i.component_callback("shop_approve_id_select_0")
+    async def shop_approve_id_select_0(self, ctx: i.ComponentContext):
+        await self.shop_approve_id_select(ctx)
+
+    @ i.component_callback("shop_approve_id_select_1")
+    async def shop_approve_id_select_1(self, ctx: i.ComponentContext):
+        await self.shop_approve_id_select(ctx)
+
+    @ i.component_callback("shop_approve_id_select_2")
+    async def shop_approve_id_select_2(self, ctx: i.ComponentContext):
+        await self.shop_approve_id_select(ctx)
+
     @ i.component_callback("shop_deny_id_select")
     async def shop_deny_id_select(self, ctx: i.ComponentContext):
         await ctx.defer(ephemeral=True)
@@ -237,6 +279,18 @@ class AdminCommand(i.Extension):
             shop = Shop(shop_id, self.client, ctx.channel)
             await shop.deny()
         await ctx.send("Shop(s) abgelehnt.", ephemeral=True, delete_after=5)
+
+    @ i.component_callback("shop_deny_id_select_0")
+    async def shop_deny_id_select_0(self, ctx: i.ComponentContext):
+        await self.shop_deny_id_select(ctx)
+
+    @ i.component_callback("shop_deny_id_select_1")
+    async def shop_deny_id_select_1(self, ctx: i.ComponentContext):
+        await self.shop_deny_id_select(ctx)
+
+    @ i.component_callback("shop_deny_id_select_2")
+    async def shop_deny_id_select_2(self, ctx: i.ComponentContext):
+        await self.shop_deny_id_select(ctx)
 
     @i.component_callback("admin_shop_owner_select")
     async def shop_owner_select(self, ctx: i.ComponentContext):
@@ -330,6 +384,18 @@ class AdminCommand(i.Extension):
         )
         await ctx.send_modal(shop_edit_modal)
 
+    @ i.component_callback("admin_shop_edit_id_select_0")
+    async def shop_edit_id_select_0(self, ctx: i.ComponentContext):
+        await self.shop_edit_id_select(ctx)
+
+    @ i.component_callback("admin_shop_edit_id_select_1")
+    async def shop_edit_id_select_1(self, ctx: i.ComponentContext):
+        await self.shop_edit_id_select(ctx)
+
+    @ i.component_callback("admin_shop_edit_id_select_2")
+    async def shop_edit_id_select_2(self, ctx: i.ComponentContext):
+        await self.shop_edit_id_select(ctx)
+
     @i.modal_callback("admin_shop_edit")
     async def admin_shop_edit(self, ctx: i.ModalContext, name: str, offer: str,
                               location: str):
@@ -353,6 +419,18 @@ class AdminCommand(i.Extension):
         )
         await ctx.send(components=[user_select], ephemeral=True, delete_after=20)
 
+    @i.component_callback("admin_shop_owner_select_shop_0")
+    async def admin_shop_owner_select_shop_0(self, ctx: i.ComponentContext):
+        await self.admin_shop_owner_select_shop(ctx)
+
+    @i.component_callback("admin_shop_owner_select_shop_1")
+    async def admin_shop_owner_select_shop_1(self, ctx: i.ComponentContext):
+        await self.admin_shop_owner_select_shop(ctx)
+
+    @i.component_callback("admin_shop_owner_select_shop_2")
+    async def admin_shop_owner_select_shop_2(self, ctx: i.ComponentContext):
+        await self.admin_shop_owner_select_shop(ctx)
+
     @i.component_callback("admin_shop_change_owner_select")
     async def admin_shop_owner_select(self, ctx: i.ComponentContext):
         await ctx.defer(ephemeral=True)
@@ -374,6 +452,18 @@ class AdminCommand(i.Extension):
             await shop.update()
         await ctx.send("Die Shops haben nun eine Kaufplicht.", ephemeral=True, delete_after=5)
 
+    @i.component_callback("shop_obligatory_id_select_0")
+    async def shop_obligatory_id_select_0(self, ctx: i.ComponentContext):
+        await self.shop_obligatory_id_select(ctx)
+
+    @i.component_callback("shop_obligatory_id_select_1")
+    async def shop_obligatory_id_select_1(self, ctx: i.ComponentContext):
+        await self.shop_obligatory_id_select(ctx)
+
+    @i.component_callback("shop_obligatory_id_select_2")
+    async def shop_obligatory_id_select_2(self, ctx: i.ComponentContext):
+        await self.shop_obligatory_id_select(ctx)
+
     @i.component_callback("shop_voluntary_id_select")
     async def shop_voluntary_id_select(self, ctx: i.ComponentContext):
         await ctx.defer(ephemeral=True)
@@ -382,6 +472,18 @@ class AdminCommand(i.Extension):
             shop.obligatory = False
             await shop.update()
         await ctx.send("Die Shops sind nun freiwillig.", ephemeral=True, delete_after=5)
+
+    @i.component_callback("shop_voluntary_id_select_0")
+    async def shop_voluntary_id_select_0(self, ctx: i.ComponentContext):
+        await self.shop_voluntary_id_select(ctx)
+
+    @i.component_callback("shop_voluntary_id_select_1")
+    async def shop_voluntary_id_select_1(self, ctx: i.ComponentContext):
+        await self.shop_voluntary_id_select(ctx)
+
+    @i.component_callback("shop_voluntary_id_select_2")
+    async def shop_voluntary_id_select_2(self, ctx: i.ComponentContext):
+        await self.shop_voluntary_id_select(ctx)
 
     @admin_base.subcommand(
         sub_cmd_name="config",
