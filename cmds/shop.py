@@ -129,13 +129,19 @@ class ShopCommand(i.Extension):
         elif aktion == "edit":
             options = self.get_shop_ids_select_options(
                 int(ctx.user.id))
-            shop_ids_selectmenu = i.StringSelectMenu(
-                custom_id="shop_edit_id_select",
-                placeholder="Shop-ID",
-                *options
-            )
+            menus = []
+            for j in range(0, len(options) // 25 + 1):
+                menus.append(
+                    i.StringSelectMenu(
+                        custom_id=f"shop_edit_id_select_{j}",
+                        placeholder="Shop-ID",
+                        *options[j*25:(j+1)*25]
+                    )
+                )
             await ctx.send("Bitte wähle einen Shop aus, den du bearbeiten möchtest:",
-                           components=shop_ids_selectmenu, ephemeral=True, delete_after=15)
+                           ephemeral=True, delete_after=10)
+            for menu in menus:
+                await ctx.send(components=menu, ephemeral=True, delete_after=25, silent=True)
         elif aktion == "delete":
             options = self.get_shop_ids_select_options(
                 int(ctx.user.id))
@@ -143,15 +149,21 @@ class ShopCommand(i.Extension):
                 await ctx.send("Du hast keine Shops, die du löschen könntest!", ephemeral=True,
                                delete_after=5)
                 return
-            shop_ids_selectmenu = i.StringSelectMenu(
-                custom_id="shop_delete_id_select",
-                placeholder="Shop-ID",
-                *options,
-                min_values=1,
-                max_values=len(options)
-            )
+            menus = []
+            for j in range(0, len(options) // 25 + 1):
+                menus.append(
+                    i.StringSelectMenu(
+                        custom_id=f"shop_delete_id_select_{j}",
+                        placeholder="Shop-ID",
+                        *options[j*25:(j+1)*25],
+                        min_values=1,
+                        max_values=len(options[j*25:(j+1)*25])
+                    )
+                )
             await ctx.send("Bitte wähle einen Shop aus, den du löschen möchtest:",
-                           components=shop_ids_selectmenu, ephemeral=True, delete_after=15)
+                           ephemeral=True, delete_after=10)
+            for menu in menus:
+                await ctx.send(components=menu, ephemeral=True, delete_after=25, silent=True)
         elif aktion == "search":
             options = [i.StringSelectOption(label=category, value=category)
                        for category in self.categories]
@@ -170,6 +182,18 @@ class ShopCommand(i.Extension):
         for shop_id in ctx.values:
             await Shop(int(shop_id), self.client, ctx.channel).delete()
         await ctx.send(content="Die Shops wurden gelöscht.", ephemeral=True, delete_after=5)
+
+    @ i.component_callback("shop_delete_id_select_0")
+    async def shop_delete_id_select_0(self, ctx: i.ComponentContext):
+        await self.shop_delete_id_select(ctx)
+
+    @ i.component_callback("shop_delete_id_select_1")
+    async def shop_delete_id_select_1(self, ctx: i.ComponentContext):
+        await self.shop_delete_id_select(ctx)
+
+    @ i.component_callback("shop_delete_id_select_2")
+    async def shop_delete_id_select_2(self, ctx: i.ComponentContext):
+        await self.shop_delete_id_select(ctx)
 
     @ i.component_callback("shop_edit_id_select")
     async def shop_edit_id_select(self, ctx: i.ComponentContext):
@@ -214,6 +238,18 @@ class ShopCommand(i.Extension):
             *components
         )
         await ctx.send_modal(shop_modal)
+
+    @ i.component_callback("shop_edit_id_select_0")
+    async def shop_edit_id_select_0(self, ctx: i.ComponentContext):
+        await self.shop_edit_id_select(ctx)
+
+    @ i.component_callback("shop_edit_id_select_1")
+    async def shop_edit_id_select_1(self, ctx: i.ComponentContext):
+        await self.shop_edit_id_select(ctx)
+
+    @ i.component_callback("shop_edit_id_select_2")
+    async def shop_edit_id_select_2(self, ctx: i.ComponentContext):
+        await self.shop_edit_id_select(ctx)
 
     @ i.modal_callback("shop_edit_modal")
     async def shop_edit_modal(self, ctx: i.ComponentContext, id: str, name: str, offer: str, location: str):
