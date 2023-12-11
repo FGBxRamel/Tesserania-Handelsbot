@@ -15,7 +15,8 @@ def setup(file: str = "data.db"):
         c.execute("CREATE TABLE IF NOT EXISTS votings (voting_id INTEGER PRIMARY KEY,\
                   user_id BIGINT, message_id BIGINT, deadline FLOAT,\
                   description TEXT, wait_time FLOAT, create_time FLOAT,\
-                    FOREIGN KEY(user_id) REFERENCES users(user_id))")
+                  time_type TEXT, initial_deadline FLOAT, count INTEGER,\
+                  FOREIGN KEY(user_id) REFERENCES users(user_id))")
         c.execute("CREATE TABLE IF NOT EXISTS shops (shop_id INTEGER PRIMARY KEY,\
                   owners TEXT, name TEXT, offer TEXT, location TEXT,\
                   category TEXT, approved BOOLEAN, message_id BIGINT, obligatory BOOLEAN)")
@@ -124,3 +125,9 @@ def decrease_shop_count(user_id: int) -> None:
         raise ValueError(f"User with ID {user_id} has no shops.")
     update_data("users", "shop_count", int(
         user_count) - 1, {"user_id": user_id})
+
+
+def get_voting_data(id: int):
+    return get_data("votings", {"voting_id": id},
+                    attribute="user_id, message_id, deadline,\
+                        description, wait_time, create_time, time_type")
