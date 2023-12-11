@@ -146,7 +146,8 @@ class VotingCommand(i.Extension):
         elif aktion == "close":
             options = []
             if db.get_data("votings", {"user_id": int(ctx.author.id)}, fetch_all=True) == []:
-                await ctx.send("Es existieren keine Abstimmungen!")
+                await ctx.send("Es existieren keine Abstimmungen!", ephemeral=True,
+                               delete_after=5)
                 return
             votings: list[tuple] = db.get_data(
                 "votings", {"user_id": int(ctx.author.id)}, attribute="voting_id", fetch_all=True)
