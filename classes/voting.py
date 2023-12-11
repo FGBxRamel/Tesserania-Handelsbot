@@ -40,13 +40,14 @@ class Voting():
                              "\U0001F1EB", "\U0001F1EC", "\U0001F1ED", "\U0001F1EE", "\U0001F1EF"]
 
         self._refresh_config()
-        if not skip_setup:
-            if not self._setup(self.id):
-                raise ValueError("Voting not found.")
+        if not skip_setup and not self._setup(self.id):
+            raise ValueError("Voting not found.")
 
-    async def create(self, emotes: list[str] = []) -> None:
+    async def create(self, emotes: list[str] = None) -> None:
         """Creates the voting in the database and the embed.
         If emotes is given it will use the given ones instead."""
+        if emotes is None:
+            emotes = []
         embed = await self._get_embed()
         voting_role = await self._get_voting_role_to_ping()
         message = await self.channel.send(content=voting_role.mention, embed=embed)
@@ -114,7 +115,7 @@ class Voting():
                 skip_setup=True
             )
             await voting.create(emotes=ties)
-            self.description += f"\n\n**Ergebnis:** Unentschieden! Bitte schaue weiter unten nach."
+            self.description += "\n\n**Ergebnis:** Unentschieden! Bitte schaue weiter unten nach."
         else:
             winner, winner_count = "", 0
             for reaction in message.reactions:
@@ -196,7 +197,7 @@ class Voting():
         reactions = message.reactions
         counts = [reaction.count for reaction in reactions]
         counts.sort(reverse=True)
-        tie = False if counts[0] != counts[1] else True
+        tie = not counts[0] != counts[1]
         return tie
 
     async def _get_ties(self) -> list[str]:

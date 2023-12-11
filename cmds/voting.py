@@ -1,6 +1,6 @@
 import configparser as cp
 from random import randint
-from time import localtime, sleep, strftime, time
+from time import time
 import classes.database as db
 import sqlite3 as sql
 from classes.voting import Voting
@@ -16,7 +16,8 @@ class VotingCommand(i.Extension):
         self.transfer_data = {}
         self.refresh_config()
 
-    def refresh_config(self) -> None:
+    @staticmethod
+    def refresh_config() -> None:
         with open('config.ini', 'r') as config_file:
             config = cp.ConfigParser()
             config.read_file(config_file)
