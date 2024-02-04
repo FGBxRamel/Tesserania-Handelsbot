@@ -14,6 +14,7 @@ class VotingCommand(i.Extension):
     def __init__(self, client) -> None:
         self.client: i.Client = client
         self.transfer_data = {}
+        self.transfer_data["descriptions"] = {}
         self.refresh_config()
 
     @staticmethod
@@ -79,7 +80,9 @@ class VotingCommand(i.Extension):
                     label="Was willst du zur Abstimmung stellen?",
                     custom_id="text",
                     required=True,
-                    placeholder=sentences[randint(0, len(sentences) - 1)]
+                    placeholder=sentences[randint(0, len(sentences) - 1)],
+                    value=self.transfer_data["descriptions"][int(ctx.author.id)] if int(
+                        ctx.author.id) in self.transfer_data["descriptions"] else ""
                 ),
                 i.InputText(
                     style=i.TextStyles.SHORT,
@@ -170,6 +173,7 @@ class VotingCommand(i.Extension):
 
     @i.modal_callback("mod_create_voting")
     async def create_voting_response(self, ctx: i.ModalContext, text: str, count: str, deadline: str):
+        self.transfer_data["descriptions"][int(ctx.author.id)] = text
         if int(count) > 10:
             await ctx.send("""Entschuldige, mehr als 10 Möglichkeiten
                 sind aktuell nicht verfügbar.""", ephemeral=True)
