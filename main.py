@@ -1,7 +1,6 @@
 import asyncio
 import configparser as cp
 from functools import partial
-import pkgutil
 from time import mktime, strftime, strptime, time
 import classes.database as db
 from classes.voting import Voting
@@ -26,12 +25,11 @@ scope_ids = SERVER_IDS
 run = False
 
 # NOTE Wichtel feature won't be supported anymore; it's there (docs folder), but without support
-bot.load_extension("interactions.ext.jurigged")
-extension_names = [m.name for m in pkgutil.iter_modules(
-    ["cmds"], prefix="cmds.")]
-for extension in extension_names:
-    bot.load_extension(extension)
-
+bot.load_extension("interactions.ext.sentry",
+                   token=config.get("Sentry", "dsn"),
+                   environment=config.get(
+                       "Sentry", "environment", fallback="production")
+                   )
 votings_timer_started: set = set()
 
 
