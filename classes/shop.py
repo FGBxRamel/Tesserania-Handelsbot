@@ -154,13 +154,13 @@ class Shop():
         owners = await self._get_owner_names()
         embed = i.Embed(
             title=self.name,
-            description=f"|| *{self.category}* ||\n",
+            description=self.offer,
             color=0xdaa520,
             footer=str(self.id)
         )
         embed.add_field(
-            name="Angebot",
-            value=self.offer,
+            name="Kategorie",
+            value=self.category,
             inline=False
         )
         embed.add_field(
