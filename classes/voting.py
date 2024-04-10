@@ -92,7 +92,12 @@ class Voting():
         await message.delete()
 
     async def close(self) -> None:
-        message = await self.channel.fetch_message(self.message_id)
+        try:
+            message = await self.channel.fetch_message(self.message_id)
+        except Exception as e:
+            if "404" in str(e):
+                self.delete()
+                return
         tie = await self._is_tie()
         if tie:
             ties = await self._get_ties()
@@ -117,6 +122,8 @@ class Voting():
             await voting.create(emotes=ties)
             self.description += "\n\n**Ergebnis:** Unentschieden! Bitte schaue weiter unten nach."
         else:
+            if tie == None:
+                return
             winner, winner_count = "", 0
             for reaction in message.reactions:
                 if reaction.count > winner_count:
@@ -193,7 +200,12 @@ class Voting():
                       self.wait_time, self.create_time, self.time_type))
 
     async def _is_tie(self) -> bool:
-        message = await self.channel.fetch_message(self.message_id)
+        try:
+            message = await self.channel.fetch_message(self.message_id)
+        except Exception as e:
+            if "404" in str(e):
+                self.delete()
+                return None
         reactions = message.reactions
         counts = [reaction.count for reaction in reactions]
         counts.sort(reverse=True)
