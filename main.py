@@ -1,6 +1,7 @@
 import asyncio
 import configparser as cp
 from functools import partial
+import pkgutil
 from time import mktime, strftime, strptime, time
 import classes.database as db
 from classes.voting import Voting
@@ -30,6 +31,11 @@ bot.load_extension("interactions.ext.sentry",
                    environment=config.get(
                        "Sentry", "environment", fallback="production")
                    )
+bot.load_extension("interactions.ext.jurigged")
+extension_names = [m.name for m in pkgutil.iter_modules(
+    ["cmds"], prefix="cmds.")]
+for extension in extension_names:
+    bot.load_extension(extension)
 votings_timer_started: set = set()
 
 
