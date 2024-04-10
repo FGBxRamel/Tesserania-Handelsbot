@@ -1,7 +1,6 @@
 import asyncio
 import configparser as cp
 from functools import partial
-import pkgutil
 from time import mktime, strftime, strptime, time
 import classes.database as db
 from classes.voting import Voting
