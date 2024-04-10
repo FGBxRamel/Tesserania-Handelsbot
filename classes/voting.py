@@ -91,7 +91,7 @@ class Voting():
         message = await self.channel.fetch_message(self.message_id)
         try:
             await message.delete()
-        except:
+        except AttributeError:
             pass
 
     async def close(self) -> None:
