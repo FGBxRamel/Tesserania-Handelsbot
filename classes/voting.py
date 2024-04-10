@@ -89,11 +89,18 @@ class Voting():
         """Deletes the voting from the database and the embed."""
         db.delete_data("votings", {"voting_id": self.id})
         message = await self.channel.fetch_message(self.message_id)
-        await message.delete()
+        try:
+            await message.delete()
+        except AttributeError:
+            pass
 
     async def close(self) -> None:
         message = await self.channel.fetch_message(self.message_id)
-        tie = await self._is_tie()
+        try:
+            tie = await self._is_tie()
+        except AttributeError:
+            await self.delete()
+            return
         if tie:
             ties = await self._get_ties()
             identifier = randint(1000, 9999)
@@ -117,6 +124,8 @@ class Voting():
             await voting.create(emotes=ties)
             self.description += "\n\n**Ergebnis:** Unentschieden! Bitte schaue weiter unten nach."
         else:
+            if tie is None:
+                return
             winner, winner_count = "", 0
             for reaction in message.reactions:
                 if reaction.count > winner_count:
@@ -194,7 +203,11 @@ class Voting():
 
     async def _is_tie(self) -> bool:
         message = await self.channel.fetch_message(self.message_id)
-        reactions = message.reactions
+        try:
+            reactions = message.reactions
+        except AttributeError:
+            await self.delete()
+            return None
         counts = [reaction.count for reaction in reactions]
         counts.sort(reverse=True)
         tie = not counts[0] != counts[1]
