@@ -89,14 +89,17 @@ class Voting():
         """Deletes the voting from the database and the embed."""
         db.delete_data("votings", {"voting_id": self.id})
         message = await self.channel.fetch_message(self.message_id)
-        await message.delete()
+        try:
+            await message.delete()
+        except:
+            pass
 
     async def close(self) -> None:
         message = await self.channel.fetch_message(self.message_id)
         try:
             tie = await self._is_tie()
         except AttributeError:
-            self.delete()
+            await self.delete()
             return
         if tie:
             ties = await self._get_ties()
@@ -203,7 +206,7 @@ class Voting():
         try:
             reactions = message.reactions
         except AttributeError:
-            self.delete()
+            await self.delete()
             return None
         counts = [reaction.count for reaction in reactions]
         counts.sort(reverse=True)
