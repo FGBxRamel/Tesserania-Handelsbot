@@ -116,6 +116,8 @@ class Shop():
 
     def set_location(self, location: str) -> None:
         """Sets the location of the shop."""
+        if len(location) > 1024:
+            raise ValueError("Location size can't exceed 1024 characters.")
         self.location = str(location)
 
     def set_category(self, category: str) -> None:
@@ -154,13 +156,13 @@ class Shop():
         owners = await self._get_owner_names()
         embed = i.Embed(
             title=self.name,
-            description=f"|| *{self.category}* ||\n",
+            description=self.offer,
             color=0xdaa520,
             footer=str(self.id)
         )
         embed.add_field(
-            name="Angebot",
-            value=self.offer,
+            name="Kategorie",
+            value=self.category,
             inline=False
         )
         embed.add_field(

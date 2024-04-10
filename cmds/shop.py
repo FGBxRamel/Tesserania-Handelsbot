@@ -229,7 +229,8 @@ class ShopCommand(i.Extension):
                 custom_id="location",
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
-                value=shop.location
+                value=shop.location,
+                max_length=1020
             )
         ]
         shop_modal = i.Modal(
@@ -313,7 +314,8 @@ class ShopCommand(i.Extension):
                 placeholder="Name",
                 custom_id="name",
                 style=i.TextStyles.SHORT,
-                required=True
+                required=True,
+                max_length=250
             ),
             i.InputText(
                 label="Angebot",
@@ -327,7 +329,8 @@ class ShopCommand(i.Extension):
                 placeholder="Wo befindet sich dein Shop?",
                 custom_id="location",
                 style=i.TextStyles.PARAGRAPH,
-                required=True
+                required=True,
+                max_length=1020
             )
         ]
         shop_create_modal = i.Modal(
