@@ -124,7 +124,7 @@ class Voting():
             await voting.create(emotes=ties)
             self.description += "\n\n**Ergebnis:** Unentschieden! Bitte schaue weiter unten nach."
         else:
-            if tie == None:
+            if tie is None:
                 return
             winner, winner_count = "", 0
             for reaction in message.reactions:
