@@ -229,7 +229,8 @@ class ShopCommand(i.Extension):
                 custom_id="location",
                 style=i.TextStyles.PARAGRAPH,
                 required=True,
-                value=shop.location
+                value=shop.location,
+                max_length=1020
             )
         ]
         shop_modal = i.Modal(
