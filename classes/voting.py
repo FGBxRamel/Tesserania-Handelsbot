@@ -92,13 +92,12 @@ class Voting():
         await message.delete()
 
     async def close(self) -> None:
+        message = await self.channel.fetch_message(self.message_id)
         try:
-            message = await self.channel.fetch_message(self.message_id)
-        except Exception as e:
-            if "404" in str(e):
-                self.delete()
-                return
-        tie = await self._is_tie()
+            tie = await self._is_tie()
+        except AttributeError:
+            self.delete()
+            return
         if tie:
             ties = await self._get_ties()
             identifier = randint(1000, 9999)
@@ -200,13 +199,12 @@ class Voting():
                       self.wait_time, self.create_time, self.time_type))
 
     async def _is_tie(self) -> bool:
+        message = await self.channel.fetch_message(self.message_id)
         try:
-            message = await self.channel.fetch_message(self.message_id)
-        except Exception as e:
-            if "404" in str(e):
-                self.delete()
-                return None
-        reactions = message.reactions
+            reactions = message.reactions
+        except AttributeError:
+            self.delete()
+            return None
         counts = [reaction.count for reaction in reactions]
         counts.sort(reverse=True)
         tie = not counts[0] != counts[1]
