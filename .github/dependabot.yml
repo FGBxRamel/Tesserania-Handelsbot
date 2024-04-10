@@ -1,5 +1,13 @@
 version: 2
 updates:
+  - package-ecosystem: "devcontainers"
+    directory: "/"
+    schedule:
+      interval: weekly
+    assignees:
+      - "fgbxramel"
+    reviewers:
+      - "fgbxramel"
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
