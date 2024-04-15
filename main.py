@@ -3,6 +3,7 @@ import configparser as cp
 from functools import partial
 import pkgutil
 from time import mktime, strftime, strptime, time
+from datetime import date
 import classes.database as db
 from classes.voting import Voting
 
@@ -17,10 +18,12 @@ with open('config.ini', 'r') as config_file:
     SERVER_IDS = config.get('General', 'servers').split(',')
     offer_channel_id = config.getint('Offer', 'offer_channel')
     voting_channel_id = config.getint('Voting', 'voting_channel')
+    vacation_channel_id = config.getint('Vacation', 'guild_channel')
 
 
 bot = i.Client(
-    token=TOKEN, sync_ext=True)
+    token=TOKEN, sync_ext=True,
+    intents=i.Intents.DEFAULT | i.Intents.GUILD_MEMBERS)
 
 scope_ids = SERVER_IDS
 run = False
@@ -57,7 +60,6 @@ async def automatic_delete(oneshot: bool = False) -> None:
             offer_count = db.get_data("users", {"user_id": user_id})[1]
             db.update_data("users", "offers_count", offer_count - 1, {
                 "user_id": user_id})
-
     votings = db.get_data(
         "votings", attribute="voting_id", fetch_all=True)
     for voting_data in votings:
@@ -65,6 +67,20 @@ async def automatic_delete(oneshot: bool = False) -> None:
         voting = Voting(voting_id, bot)
         if voting.deadline <= int(current_time):
             await voting.close()
+    vacations = db.get_data(
+        "vacations", attribute="ID, end_date, message_id", fetch_all=True)
+    for id, end_date, message_id in vacations:
+        current_date = date.today()
+        end_date = date.fromtimestamp(end_date)
+        delta = end_date - current_date
+        if delta.days <= 0:
+            vacation_channel = await bot.fetch_channel(vacation_channel_id)
+            message = await vacation_channel.fetch_message(message_id)
+            try:
+                await message.delete()
+            except TypeError:
+                continue
+            db.delete_data("vacations", {"ID": id})
 
 
 def run_delete(oneshot: bool = False):

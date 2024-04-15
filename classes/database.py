@@ -1,6 +1,7 @@
 import sqlite3 as sql
 
 # Beware: All of this is not sufficient to stop SQL injection, but enough for this bot
+# It's also pretty bad code, but it works. I'm sorry.
 
 
 def setup(file: str = "data.db"):
@@ -20,6 +21,9 @@ def setup(file: str = "data.db"):
         c.execute("CREATE TABLE IF NOT EXISTS shops (shop_id INTEGER PRIMARY KEY,\
                   owners TEXT, name TEXT, offer TEXT, location TEXT,\
                   category TEXT, approved BOOLEAN, message_id BIGINT, obligatory BOOLEAN)")
+        c.execute("CREATE TABLE IF NOT EXISTS vacations (ID INTEGER PRIMARY KEY,\
+                  user_id BIGINT, start_date BIGINT, end_date BIGINT, reason TEXT,\
+                  issuer BIGINT, message_id BIGINT)")
         conn.commit()
 
 
