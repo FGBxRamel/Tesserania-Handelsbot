@@ -18,6 +18,7 @@ for r in config.get('Vacation', 'reasons').split('|'):
 class UrlaubCommand(i.Extension):
     def __init__(self, client):
         self.elevatedUsers = {"updateTime": time(), "users": set()}
+        self.client = client
 
     def _getDMUsers(self, ctx: i.SlashContext) -> list[i.Member]:
         """Searches all users of a guild that have the DM role and returns them as a list.
