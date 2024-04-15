@@ -26,7 +26,7 @@ class UrlaubCommand(i.Extension):
         for role_id in config.get('Vacation', 'dm_roles').split(','):
             dm_roles.append(ctx.guild.get_role(int(role_id)))
 
-        dm: set[i.Member] = set((role.members for role in dm_roles))
+        dm: set[i.Member] = {role.members for role in dm_roles}
 
         self.elevatedUsers["updateTime"] = time()
         self.elevatedUsers["users"] = dm
