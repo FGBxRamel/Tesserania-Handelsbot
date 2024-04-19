@@ -99,7 +99,7 @@ class AdminCommand(i.Extension):
             options = []
             shops = db.get_data("shops", {"approved": True}, fetch_all=True,
                                 attribute="shop_id, name")
-            if shops == []:
+            if shops == None or len(shops) == 0:
                 await ctx.send("Es gibt keine genehmigten Shops.", ephemeral=True)
                 return
             for shop_id, name in shops:
