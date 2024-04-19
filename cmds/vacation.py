@@ -15,7 +15,7 @@ for r in config.get('Vacation', 'reasons').split('|'):
     reason.append(i.SlashCommandChoice(name=r, value=r))
 
 
-class UrlaubCommand(i.Extension):
+class VacationCommand(i.Extension):
     def __init__(self, client):
         self.elevatedUsers = {"updateTime": time(), "users": set()}
         self.client = client
@@ -40,37 +40,37 @@ class UrlaubCommand(i.Extension):
             self.elevatedUsers["users"] = self._getDMUsers(user)
         return user in self.elevatedUsers["users"]
 
-    @i.slash_command(name="urlaub",
-                     description="Der Command für das Eintragen von Urlauben.",
+    @i.slash_command(name="abwesenheit",
+                     description="Der Command für das Eintragen von Abwesenheiten.",
                      scopes=scope_ids)
     @i.slash_option(
         name="nutzer",
         opt_type=i.OptionType.USER,
-        description="Der Nutzer, für den der Urlaub eingetragen werden soll.",
+        description="Der Nutzer, für den die Abwesenheit eingetragen werden soll.",
         required=True
     )
     @i.slash_option(
         name="grund",
-        description="Der Grund für den Urlaub.",
+        description="Der Grund für die Abwesenheit.",
         opt_type=i.OptionType.STRING,
         required=True,
         choices=reason
     )
     @i.slash_option(
         name="beginn",
-        description="Der Beginn des Urlaubs.",
+        description="Der Beginn der Abwesenheit.",
         opt_type=i.OptionType.STRING,
         required=True
     )
     @i.slash_option(
         name="ende",
-        description="Das Ende des Urlaubs.",
+        description="Das Ende der Abwesenheit.",
         opt_type=i.OptionType.STRING,
         required=True
     )
-    async def urlaub(self, ctx: i.SlashContext, nutzer: i.Member, grund: str, beginn: str, ende: str):
+    async def abwesenheit(self, ctx: i.SlashContext, nutzer: i.Member, grund: str, beginn: str, ende: str):
         if not self._isUserElevated(ctx.author) and nutzer != ctx.author:
-            await ctx.send("Du hast keine Berechtigung, Urlaub für andere einzutragen!", ephemeral=True, delete_after=5)
+            await ctx.send("Du hast keine Berechtigung, Abwesenheit für andere einzutragen!", ephemeral=True, delete_after=5)
             return
         try:
             converted_start_date = datetime.strptime(beginn, '%d.%m.%Y')
@@ -79,7 +79,7 @@ class UrlaubCommand(i.Extension):
             await ctx.send("Das Datum muss im Format dd.mm.yyyy sein!", ephemeral=True, delete_after=10)
             return
 
-        embed = i.Embed(title="Urlaubsinfo",
+        embed = i.Embed(title="Abwesenheitsinfo",
                         description=f"**Wer?**\n{nutzer.display_name}",
                         fields=[
                             i.EmbedField(
@@ -109,4 +109,4 @@ class UrlaubCommand(i.Extension):
                    int(ctx.author.id),
                    int(guild_message.id)))
 
-        await ctx.send("Urlaub eingetragen!", ephemeral=True, delete_after=10)
+        await ctx.send("Abwesenheit eingetragen!", ephemeral=True, delete_after=10)
