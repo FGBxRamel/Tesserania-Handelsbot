@@ -6,7 +6,7 @@ blessed==1.20.0
 certifi==2024.2.2
 charset-normalizer==3.3.2
 codefind==0.1.6
-discord-py-interactions==5.11.0
+discord-py-interactions==5.12.1
 discord-typings==0.8.0
 emoji==2.12.1
 frozenlist==1.4.1
