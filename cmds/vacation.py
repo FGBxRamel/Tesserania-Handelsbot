@@ -73,21 +73,25 @@ class VacationCommand(i.Extension):
             await ctx.send("Du hast keine Berechtigung, Abwesenheit für andere einzutragen!", ephemeral=True, delete_after=5)
             return
         try:
-            converted_start_date = datetime.strptime(beginn, '%d.%m.%Y')
-            converted_end_date = datetime.strptime(ende, '%d.%m.%Y')
+            start_date_datetime = datetime.strptime(beginn, '%d.%m.%Y')
+            end_date_datetime = datetime.strptime(ende, '%d.%m.%Y')
+
+            start_date_timestamp = i.Timestamp.fromdatetime(
+                start_date_datetime)
+            end_date_timestamp = i.Timestamp.fromdatetime(end_date_datetime)
         except ValueError:
             await ctx.send("Das Datum muss im Format dd.mm.yyyy sein!", ephemeral=True, delete_after=10)
             return
 
         embed = i.Embed(title="Abwesenheitsinfo",
-                        description=f"**Wer?**\n{nutzer.display_name}",
+                        description=f"**Wer?**\n{nutzer.mention}",
                         fields=[
                             i.EmbedField(
                                 name="Grund", value=grund),
                             i.EmbedField(
-                                name="Beginn", value=converted_start_date.strftime('%d.%m.%Y')),
+                                name="Beginn", value=start_date_timestamp.format(i.TimestampStyles.LongDate)),
                             i.EmbedField(
-                                name="Ende", value=converted_end_date.strftime('%d.%m.%Y'))
+                                name="Ende", value=end_date_timestamp.format(i.TimestampStyles.LongDate))
                         ])
         guild_channel = ctx.guild.get_channel(
             int(config.get('Vacation', 'guild_channel')))
@@ -103,8 +107,8 @@ class VacationCommand(i.Extension):
         # Save vacation in database
         save_data('vacations', 'user_id, start_date, end_date, reason, issuer, message_id',
                   (int(nutzer.id),
-                   converted_start_date.timestamp(),
-                   converted_end_date.timestamp(),
+                   start_date_datetime.timestamp(),
+                   end_date_datetime.timestamp(),
                    grund,
                    int(ctx.author.id),
                    int(guild_message.id)))
