@@ -91,9 +91,9 @@ class VacationCommand(i.Extension):
                             i.EmbedField(
                                 name="Grund", value=grund),
                             i.EmbedField(
-                                name="Beginn", value=start_date_timestamp.format(i.TimestampStyles.LongDate)),
+                                name="Beginn", value=start_date_timestamp.format(i.TimestampStyles.RelativeTime)),
                             i.EmbedField(
-                                name="Ende", value=end_date_timestamp.format(i.TimestampStyles.LongDate))
+                                name="Ende", value=end_date_timestamp.format(i.TimestampStyles.RelativeTime))
                         ])
         guild_channel = ctx.guild.get_channel(
             int(config.get('Vacation', 'guild_channel')))
