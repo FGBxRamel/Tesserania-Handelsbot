@@ -1,7 +1,9 @@
-import interactions as i
 import configparser as cp
 from datetime import datetime
 from time import time
+
+import interactions as i
+
 from classes.database import save_data
 
 user_select_data = {}
