@@ -1,11 +1,12 @@
 import configparser as cp
+import sqlite3 as sql
 from random import randint
 from time import time
-import classes.database as db
-import sqlite3 as sql
-from classes.voting import Voting
 
 import interactions as i
+
+import classes.database as db
+from classes.voting import Voting
 
 scope_ids = []
 

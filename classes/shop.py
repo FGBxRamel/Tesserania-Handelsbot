@@ -1,7 +1,9 @@
-import interactions as i
-import classes.database as db
 import configparser as cp
 from sqlite3 import IntegrityError
+
+import interactions as i
+
+import classes.database as db
 
 
 class Shop():

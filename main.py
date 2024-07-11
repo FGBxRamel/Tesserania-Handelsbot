@@ -1,13 +1,14 @@
 import asyncio
 import configparser as cp
-from functools import partial
 import pkgutil
-from time import mktime, strftime, strptime, time
 from datetime import date
-import classes.database as db
-from classes.voting import Voting
+from functools import partial
+from time import mktime, strftime, strptime, time
 
 import interactions as i
+
+import classes.database as db
+from classes.voting import Voting
 
 db.setup()
 

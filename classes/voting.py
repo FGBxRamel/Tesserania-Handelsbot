@@ -1,10 +1,12 @@
-from random import randint
-from time import localtime, sleep, strftime, time
-import interactions as i
 import configparser as cp
-import classes.database as db
-from sqlite3 import IntegrityError
 import re
+from random import randint
+from sqlite3 import IntegrityError
+from time import localtime, sleep, strftime, time
+
+import interactions as i
+
+import classes.database as db
 
 
 class Voting():

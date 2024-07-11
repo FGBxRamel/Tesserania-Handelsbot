@@ -1,10 +1,11 @@
 import configparser as cp
-from time import strftime, time, localtime
-from random import randint
 import sqlite3 as sql
-import classes.database as db
+from random import randint
+from time import localtime, strftime, time
 
 import interactions as i
+
+import classes.database as db
 
 scope_ids = []
 

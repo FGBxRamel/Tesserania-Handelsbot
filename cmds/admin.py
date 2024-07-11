@@ -1,11 +1,12 @@
 import configparser as cp
 import pkgutil
-from random import randint
-import classes.database as db
-from classes.shop import Shop
 import sqlite3 as sql
+from random import randint
 
 import interactions as i
+
+import classes.database as db
+from classes.shop import Shop
 
 scope_ids = []
 
