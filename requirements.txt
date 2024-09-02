@@ -13,7 +13,7 @@ frozenlist==1.4.1
 idna==3.7
 jurigged==0.5.8
 multidict==6.0.5
-ovld==0.3.5
+ovld==0.3.9
 sentry-sdk==2.8.0
 six==1.16.0
 tomli==2.0.1
