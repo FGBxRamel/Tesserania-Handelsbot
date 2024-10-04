@@ -21,4 +21,4 @@ typing_extensions==4.12.2
 urllib3==2.2.2
 watchdog==5.0.2
 wcwidth==0.2.13
-yarl==1.9.4
+yarl==1.13.1
