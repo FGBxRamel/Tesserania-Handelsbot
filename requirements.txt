@@ -14,7 +14,7 @@ idna==3.7
 jurigged==0.5.8
 multidict==6.1.0
 ovld==0.4.4
-sentry-sdk==2.14.0
+sentry-sdk==2.16.0
 six==1.16.0
 tomli==2.0.1
 typing_extensions==4.12.2
